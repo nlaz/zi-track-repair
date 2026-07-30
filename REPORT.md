@@ -3,7 +3,7 @@
 **Source:** `1784253717886.mp3` — 65:45, 48 kHz stereo, 192 kbps CBR MP3, 94.7 MB
 **Reported symptom:** "the track is skipping and has clipping artifacts"
 
-**Outcome:** 241 dropouts (6.17 s of missing audio) concealed across 238 repair spans.
+**Outcome:** 241 dropouts (6.17 s of missing audio) concealed across 260 repair spans.
 Zero dropouts remain, fills sit level with the surrounding music, and no sample outside
 a repair span or its 10 ms crossfade was altered.
 
@@ -12,7 +12,9 @@ a repair span or its 10 ms crossfade was altered.
 > seams. Both were spotted by eye in the spectrogram, not by the verification suite.
 > Section 4 documents what went wrong and why the original checks missed it. A
 > subsequent **visual audit of all 238 repairs** (§5) found and fixed a third: fills in
-> bass-heavy passages were being lowpassed at 8 kHz and losing real treble.
+> bass-heavy passages were being lowpassed at 8 kHz and losing real treble. A fourth,
+> reported by ear at 41:50–41:53, is documented in §6: some spans stopped short and left
+> part of the dropout unrepaired.
 
 ---
 
@@ -194,6 +196,7 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 | Audio lost | 6.17 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
 | Repairs visually inspected | — | **238 / 238** |
+| Residual dips deeper than control p99 | — | **0** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Seams with broadband splice burst | — | **1%** |
 | Digital-silence runs introduced | — | **0** |
@@ -350,7 +353,53 @@ on.
 
 ---
 
-## 6. Caveats
+## 6. Under-repaired spans (reported by ear at 41:50–41:53)
+
+A cluster of four repairs in 2.5 s was audibly glitchy. The fills themselves were fine —
+levels within ±1.3 dB, three of four matching well. The fault was the **span boundaries**:
+at 41:52.522 the dropout runs about 210 ms but the span covered only 50 ms, leaving
+roughly 160 ms of the original dropout untouched immediately after the repair.
+
+### 6.1 Why the verification missed it
+
+The dropout detector fires on a fall of more than **32 dB inside one millisecond**. After
+partial repair, the transition from fill into the surviving damage decays over 2–3 ms, so
+the steepest single-millisecond step is **−30.5 dB** — just under the threshold. The
+residual was 7 dB below its surroundings and plainly visible in an envelope plot, but no
+sample pair satisfied the rule.
+
+This is the same failure mode as §4.1 in a new place: a detector tuned to one signature
+(an abrupt edge) cannot see damage that presents with a slightly gentler one.
+
+### 6.2 The fix
+
+A **level-based residual scan** was added: for each repair span, look ±400 ms either side
+for sustained regions still far below the local reference level.
+
+The threshold came from a control rather than from judgement. Run over 400 pseudo-spans
+placed in clean audio, the same criterion produced dips with a median depth of **16.4 dB**
+and a 99th percentile of **42.8 dB** — this music simply has deep short dips. Scoring the
+real spans against that reference, **23 of 337 dips exceeded the control's p99**; the
+other 314 were ordinary musical dynamics.
+
+Repairing only those, and iterating until the scan came back empty, took three rounds and
+added **22 repairs totalling 1.67 s**. Regions were excluded from exemplar sourcing as
+they were identified, so no fill was copied from still-damaged audio.
+
+| | v6 | v7 |
+|---|---|---|
+| Residual dips deeper than control p99 | 21 | **0** |
+| Repair spans | 238 | **260** |
+| Audio touched | 16.75 s | 18.74 s |
+| Samples changed outside repairs | 0 | **0** |
+| Peak | −0.32 dBFS | **−0.32 dBFS** |
+
+Without the control this would have looked like 264 residual regions totalling 11.4 s,
+and "fixing" all of them would have replaced 9.7 s of undamaged music.
+
+---
+
+## 7. Caveats
 
 **The matched fills are not what was played.** 230 of 238 repairs contain real audio
 lifted from elsewhere in the set. They are musically plausible and spectrally continuous,
@@ -373,7 +422,7 @@ available on request; it was omitted here for size.
 
 ---
 
-## 7. Files
+## 8. Files
 
 | File | Description |
 |---|---|

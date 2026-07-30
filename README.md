@@ -23,6 +23,7 @@ dropout's edge.
 | Samples changed outside repairs | — | **0** |
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
 | Repairs visually inspected | — | **238 / 238** |
+| Residual damage after repair | — | **0** |
 
 `REPORT.md` is the formal technical report. This file is the working narrative: how the
 job actually went, including what went wrong.
@@ -109,7 +110,23 @@ onto its 8 kHz clamp and the fill was lowpassed at 8 kHz, stripping real treble
 rather than a level threshold, and by filtering only genuine excess. Full detail in
 `REPORT.md` §5.
 
-Final state: **235 of 238 clean, one known-weak repair (26:45.658), one false alarm.**
+Final state after that pass: 235 of 238 clean, one known-weak repair (26:45.658), one
+false alarm.
+
+### 8. Listen, then check what listening finds
+
+A glitch reported by ear at 41:50–41:53 turned out to be a **span** problem, not a fill
+problem: at 41:52.522 the dropout runs ~210 ms and the span covered only 50 ms, leaving
+160 ms of original damage in place. The dropout detector missed it because the residual's
+steepest single-millisecond fall is −30.5 dB, just under its 32 dB threshold.
+
+A level-based residual scan now catches this shape, with its threshold set from a control
+(clean-audio dips have a median depth of 16.4 dB and a p99 of 42.8 dB). That found 23 real
+residuals out of 337 candidate dips; repairing them took three rounds and 22 extra spans.
+Detail in `REPORT.md` §6.
+
+**Final: 260 repair spans, 12.5 s of fill, no residual damage detectable by any of the
+four checks.**
 
 ---
 
@@ -206,6 +223,17 @@ The deficit was an artefact: a 20–100 ms window landing between hi-hat transie
 naturally measures low against its own neighbourhood. Nothing was wrong. Without the
 control, that would have been a day spent optimising against noise — the same trap as the
 two misleading metrics above, caught earlier only because the habit was already in place.
+
+### One detector sees one failure shape
+
+The dropout detector looked for a >32 dB fall inside 1 ms. It found all 241 original
+dropouts and then missed a 160 ms piece of one of them, because after partial repair the
+same damage presented with a 30.5 dB/ms edge instead of a 33 dB/ms one. Nothing was wrong
+with the rule; it was answering the question it was asked.
+
+**Generalises to:** a threshold tuned on the original failure will not survive the failure
+changing shape. Detect the *property* you care about (here: a region far below its
+surroundings) rather than the signature you first observed.
 
 ### The eye caught what the metrics missed
 

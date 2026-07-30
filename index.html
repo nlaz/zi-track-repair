@@ -172,7 +172,7 @@ code{font-family:var(--mono); font-size:.86em;}
   <div class="stats">
     <div><span class="n bad">241</span><span class="lab">dropouts found</span></div>
     <div><span class="n good">0</span><span class="lab">dropouts remaining</span></div>
-    <div><span class="n">16.75 s</span><span class="lab">audio touched</span></div>
+    <div><span class="n">18.74 s</span><span class="lab">audio touched</span></div>
     <div><span class="n good">0</span><span class="lab">samples altered elsewhere</span></div>
   </div>
 </section>
@@ -244,7 +244,7 @@ code{font-family:var(--mono); font-size:.86em;}
       seconds either side of the current instant — including what is about to happen.
       Amber bands mark repairs as they approach. Drag the timeline to scrub, or click; it
       snaps to a repair when you land near one.
-      Arrow keys step 5&nbsp;s, shift-arrow 30&nbsp;s. Ticks mark all <b>238</b> repairs.
+      Arrow keys step 5&nbsp;s, shift-arrow 30&nbsp;s. Ticks mark all <b>260</b> repairs.
       The two spectrograms are stacked and share one time axis, so a single instant is one
       vertical column across both — <b>0&ndash;24&nbsp;kHz</b>, low frequencies at the
       bottom of each. On <b>before</b> a dropout is a full-height dark notch; on
@@ -306,6 +306,11 @@ code{font-family:var(--mono); font-size:.86em;}
   <b>230</b> times and a pitch-synchronous repeat <b>8</b> times; autoregressive
   interpolation never wins outright, which is the correct outcome given the table
   above.</p>
+  <p>A second pass then re-scans either side of every repair for damage the span missed.
+  Some dropouts decay slightly too gently to trip an edge detector, so they are found by
+  level instead — against a threshold set from clean audio in the same track, since this
+  music has deep short dips of its own. That added <b>22</b> spans, bringing the total to
+  <b>260</b>.</p>
   <p>Every fill is then matched to the local high-frequency ceiling, crossfaded
   <b>10&nbsp;ms</b> into the measured audio at both ends rather than hard-spliced, and
   capped so it can never exceed the original's peak.</p>
@@ -333,6 +338,7 @@ code{font-family:var(--mono); font-size:.86em;}
         <tr><th>Fills &gt;10 dB below surroundings</th><td class="no">41</td><td class="ok">1</td></tr>
         <tr><th>Seams with broadband splice burst</th><td>&mdash;</td><td class="ok">1%</td></tr>
         <tr><th>Digital-silence runs introduced</th><td>&mdash;</td><td class="ok">0</td></tr>
+        <tr><th>Residual dips below control p99</th><td class="no">21</td><td class="ok">0</td></tr>
         <tr><th>Samples changed outside repairs</th><td>&mdash;</td><td class="ok">0</td></tr>
         <tr><th>Peak level</th><td>&minus;0.32 dBFS</td><td class="ok">&minus;0.32 dBFS</td></tr>
         <tr><th>Seam step vs neighbours</th><td>&mdash;</td><td class="ok">0.21 (control 0.22)</td></tr>
@@ -366,7 +372,7 @@ code{font-family:var(--mono); font-size:.86em;}
       <span class="s">Findings, method, verification, caveats</span></a>
     <a href="data/repair_manifest.csv" download>
       <span class="t">Repair manifest</span>
-      <span class="s">CSV &middot; 238 repairs with method, match and score</span></a>
+      <span class="s">CSV &middot; 260 repairs with method, pass, match and score</span></a>
   </div>
   <p class="col" style="font-size:.9rem;color:var(--ink-soft)">The repaired master was
   produced losslessly; this MP3 is a 192&nbsp;kbps encode of it, matching the original's
