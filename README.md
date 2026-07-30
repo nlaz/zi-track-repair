@@ -16,8 +16,15 @@ transient at each dropout's edge.
 |---|---|---|
 | Dropouts | 241 | **0** |
 | Audio lost | 6.17 s | **0.00 s** |
+| Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
+| Fills >10 dB below surroundings | 41 | **1** |
 | Samples changed outside repairs | — | **0** |
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
+
+Each gap is filled by scoring eight candidate fills against the surrounding music and
+taking the best — a real passage from elsewhere in the set wins 230 times, a
+pitch-synchronous repeat 8 times. Fills are ceiling-matched and crossfaded 10 ms into the
+measured audio rather than spliced.
 
 See the [technical report](REPORT.md) for findings, method and verification.
 

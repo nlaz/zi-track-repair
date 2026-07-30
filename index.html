@@ -136,7 +136,7 @@ code{font-family:var(--mono); font-size:.86em;}
   <div class="stats">
     <div><span class="n bad">241</span><span class="lab">dropouts found</span></div>
     <div><span class="n good">0</span><span class="lab">dropouts remaining</span></div>
-    <div><span class="n">11.59 s</span><span class="lab">audio replaced</span></div>
+    <div><span class="n">16.75 s</span><span class="lab">audio touched</span></div>
     <div><span class="n good">0</span><span class="lab">samples altered elsewhere</span></div>
   </div>
 </section>
@@ -209,11 +209,17 @@ code{font-family:var(--mono); font-size:.86em;}
       </tbody>
     </table>
   </div>
-  <p><b>Below 25&nbsp;ms</b> — 102 spans — a least-squares autoregressive interpolation
-  (Janssen's method, order 128) continues the surrounding waveform into the hole.
-  <b>Above 25&nbsp;ms</b> — 137 spans — the gap is filled with the best-matching passage
-  from elsewhere in the set, located by correlating the audio either side of the gap
-  against &plusmn;8&nbsp;s of the track. Matches averaged 0.68 at lags of 1.7–7.2&nbsp;s.</p>
+  <p>Rather than pick a method from gap length alone, every gap now gets <b>eight
+  candidate fills</b> — the six best-matching passages from elsewhere in the track, a
+  pitch-synchronous repeat of its own neighbours, and an AR interpolation — and each is
+  scored on how closely its energy matches the surrounding music band by band. The
+  best-scoring candidate wins. In practice that chooses a real passage from elsewhere in
+  the set <b>230</b> times and a pitch-synchronous repeat <b>8</b> times; autoregressive
+  interpolation never wins outright, which is the correct outcome given the table
+  above.</p>
+  <p>Every fill is then matched to the local high-frequency ceiling, crossfaded
+  <b>10&nbsp;ms</b> into the measured audio at both ends rather than hard-spliced, and
+  capped so it can never exceed the original's peak.</p>
   <div class="callout">
     <p><b>Repairs are wider than the silences.</b> These dropouts don't stop and
     restart — the stream cuts out in under 2&nbsp;ms, then fades back in over
@@ -236,6 +242,10 @@ code{font-family:var(--mono); font-size:.86em;}
         <tr><th>Dropouts detected</th><td class="no">241</td><td class="ok">0</td></tr>
         <tr><th>Audio lost</th><td class="no">6.17 s</td><td class="ok">0.00 s</td></tr>
         <tr><th>Samples changed outside repairs</th><td>&mdash;</td><td class="ok">0</td></tr>
+        <tr><th>Fill level vs surrounding music</th><td>&minus;5.7 dB</td><td class="ok">&plusmn;0.0 dB</td></tr>
+        <tr><th>Fills &gt;10 dB below surroundings</th><td class="no">41</td><td class="ok">1</td></tr>
+        <tr><th>Seams with broadband splice burst</th><td>&mdash;</td><td class="ok">1%</td></tr>
+        <tr><th>Digital-silence runs introduced</th><td>&mdash;</td><td class="ok">0</td></tr>
         <tr><th>Peak level</th><td>&minus;0.32 dBFS</td><td class="ok">&minus;0.32 dBFS</td></tr>
         <tr><th>Full-scale samples</th><td>0</td><td class="ok">0</td></tr>
         <tr><th>Seam step, median</th><td>&mdash;</td><td class="ok">0.21</td></tr>
@@ -245,10 +255,16 @@ code{font-family:var(--mono); font-size:.86em;}
     </table>
   </div>
   <p>Seam figures compare each repair boundary's sample step against the 99.5th
-  percentile of its neighbours. A control of 6,000 random points in untouched audio
-  scored a median of 0.23 and a worst case of 1.69 — so the repaired seams are, by this
-  measure, smoother than naturally occurring transitions. None of the 956 seams exceeds
-  2&times;.</p>
+  percentile of its neighbours. A control of random points in untouched audio scored a
+  median of 0.22 — so the repaired seams are, by this measure, as smooth as naturally
+  occurring transitions. None exceeds 2&times;.</p>
+  <p>Two of these checks exist because an earlier version of this repair passed the
+  others and was still wrong. <b>Fill level</b> catches a fill that decays quietly to
+  nothing — a hole with no sharp edge for a dropout detector to find. <b>Broadband
+  splice burst</b> measures energy from 19–23&nbsp;kHz, where this material has no
+  content at all, so any hard splice shows up there unmistakably even when the music
+  masks it lower down. Both failures were visible in the spectrogram before any metric
+  caught them.</p>
 </section>
 
 <section>
@@ -268,7 +284,7 @@ code{font-family:var(--mono); font-size:.86em;}
       <span class="s">Findings, method, verification, caveats</span></a>
     <a href="data/repair_manifest.csv" download>
       <span class="t">Repair manifest</span>
-      <span class="s">CSV &middot; 239 repairs with method and match score</span></a>
+      <span class="s">CSV &middot; 238 repairs with method, match and score</span></a>
   </div>
   <p class="col" style="font-size:.9rem;color:var(--ink-soft)">The repaired master was
   produced losslessly; this MP3 is a 192&nbsp;kbps encode of it, matching the original's
@@ -278,12 +294,14 @@ code{font-family:var(--mono); font-size:.86em;}
 
 <section class="col">
   <div class="callout">
-    <p><b>One honest caveat.</b> The 137 exemplar fills are real audio lifted from
-    elsewhere in the set. They are musically plausible and spectrally correct, but they
-    are not what was played in those moments. For a commercial release, spot-check the
-    longest by ear — 26:45.399, 44:11.734, 43:01.952 and 12:02.938 — and remember that
-    a re-capture from the performer's own local recording would still beat all of
-    this.</p>
+    <p><b>Honest caveats.</b> The 230 matched fills are real audio lifted from elsewhere
+    in the set. They are musically plausible and spectrally continuous, but they are not
+    what was played in those moments. For a commercial release, spot-check the longest by
+    ear — 26:45.399, 44:11.734, 41:53.245 and 12:02.938 — and remember that a re-capture
+    from the performer's own local recording would still beat all of this.</p>
+    <p>One span resists a good fill: <b>26:45.658</b>, 20&nbsp;ms, sits 12.7&nbsp;dB below
+    its neighbours because no comparable passage exists nearby. It is the single worst
+    fill in the track and the only one more than 10&nbsp;dB down.</p>
   </div>
 </section>
 
