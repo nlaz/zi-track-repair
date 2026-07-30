@@ -6,9 +6,12 @@ Dropout analysis and repair of a 66-minute set captured from an RTMP stream.
 either version with live stacked spectrograms, past and future either side of the
 playhead.
 
-The capture lost **6.17 seconds of audio across 241 dropouts**. None of it was
-recoverable — no redundancy, no surviving channel. All 241 are now concealed and verified
+The capture lost **8.52 seconds of audio across 311 dropouts**. None of it was
+recoverable — no redundancy, no surviving channel. All 311 are now concealed and verified
 inaudible.
+
+The first detector found only 241 of them; the other 70 were excluded by a guard inside
+it and were found later (see step 9 below).
 
 The reported "clipping" turned out not to exist: peak is −0.32 dBFS with zero full-scale
 samples and no inter-sample overs. What sounded like clipping was the transient at each
@@ -17,7 +20,7 @@ dropout's edge.
 | | Before | After |
 |---|---|---|
 | Dropouts | 311 | **0** |
-| Audio lost | 6.17 s | **0.00 s** |
+| Audio lost | 8.52 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Samples changed outside repairs | — | **0** |
@@ -36,8 +39,8 @@ job actually went, including what went wrong.
 - `index.html` — comparison page: full-length A/B playback, live stacked spectrograms
 - `REPORT.md` — technical report (findings, method, verification, caveats)
 - `audio/` — original and repaired MP3, 192 kbps, matching formats
-- `data/repair_manifest.csv` — all 238 repairs: method, lag, match score, fill level
-- `data/dropouts_detected.csv` — all 241 detections with per-channel attenuation
+- `data/repair_manifest.csv` — all 330 repairs: how found, method, lag, match score, fill level
+- `data/dropouts_detected.csv` — the original 241 detections with per-channel attenuation
 - `data/repairs.json`, `data/clips.json` — page data
 - `clips/`, `img/` — A/B excerpts and static spectrograms
 
@@ -89,8 +92,8 @@ over 30–60 ms**. That ramp is damaged audio too — real music at the wrong, r
 Repairing only the silence leaves it behind and the result swells into place.
 
 Two boundary rules were tried and rejected against hand-inspected envelopes before one
-worked (see `REPORT.md` §2.2). Fixing 6.17 s of silence required replacing 11.6 s of
-audio.
+worked (see `REPORT.md` §2.2). On the first pass, fixing 6.17 s of silence required
+replacing 11.6 s of audio.
 
 ### 6. Fill, then verify against the surrounding music
 
@@ -221,6 +224,21 @@ dark hole at contact-sheet scale and turned out to be **+4.3 dB brighter** than 
 surroundings when rendered full size. Low-resolution screening is the right way to cover
 238 items, but every flag has to be re-checked at full resolution before it is acted on —
 otherwise you fix things that were never broken.
+
+### Average over the wrong window and you get the wrong answer
+
+Re-checking whether the 70 newly-found dropouts had a surviving channel, the first
+measurement took RMS across the whole repair span and reported 25 events with an intact
+channel — implying 25 could have been genuinely *recovered* rather than concealed. That
+would have been a materially better repair, so it was worth chasing.
+
+It was wrong. The span deliberately includes the 30–60 ms recovery ramp, which is not
+silent, so averaging across it diluted the measurement. Measuring the near-silent core
+instead gives a median of −53.2 dB and **zero** intact channels — the same conclusion as
+the original 241.
+
+**Generalises to:** when a summary statistic covers a region with deliberately mixed
+content, it describes the mixture, not the part you meant. Measure the part you meant.
 
 ### A suspicious measurement needs a control before it needs a fix
 

@@ -40,14 +40,20 @@ There is also no Xing/LAME header (ffprobe falls back to `Estimating duration fr
 bitrate`). Together these say the file is an **ffmpeg capture of a live RTMP stream**,
 not a DAW bounce. The damage is network loss recorded faithfully.
 
-### 1.2 The skipping is real — 241 dropouts
+### 1.2 The skipping is real — 311 dropouts
 
 | | |
 |---|---|
-| Confirmed dropouts | **241** |
-| Total audio lost | **6.17 s** (0.156% of the track) |
+| Confirmed dropouts | **311** |
+| — found by the first scan | 241 |
+| — found later, after §7 | 70 |
+| Total audio lost | **8.52 s** (0.216% of the track) |
 | Duration | median 18 ms, mean 25.6 ms, max 134 ms |
-| Rate | 3.7 per minute |
+| Rate | 4.7 per minute |
+
+> The figures below in this section describe the 241 found by the first scan, since that
+> was the population available when the analysis was done. §7 explains why the other 70
+> were missing and confirms the same conclusions hold for them.
 
 The signature is unambiguous and non-musical: a **~45 dB collapse in under 2 ms**, then
 ~80 ms near-silence, then a **gradual 30–60 ms fade back in**. No acoustic event decays
@@ -195,17 +201,18 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 
 | Check | Before | After |
 |---|---|---|
-| Dropouts detected | 241 | **0** |
-| Audio lost | 6.17 s | **0.00 s** |
+| Dropouts detected | 311 | **0** |
+| Audio lost | 8.52 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
 | Repairs visually inspected | — | **238 / 238** |
 | Residual dips deeper than control p99 | — | **0** |
 | Undetected dropouts found and repaired | — | **70** |
+| Repair spans | — | **330** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Seams with broadband splice burst | — | **1%** |
 | Digital-silence runs introduced | — | **0** |
 | Samples changed outside repair + crossfade | — | **0** |
-| Audio touched | — | 16.75 s (0.425%) |
+| Audio touched | — | 24.90 s (0.631%) |
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
 | Full-scale samples | 0 | **0** |
 | Seam step vs neighbours, median | — | **0.21** (control 0.22) |
@@ -446,12 +453,36 @@ surroundings does not.
 every one was a dropout: full-height dark band, envelope collapsing to −50/−90 dBFS, loud
 music either side.
 
-### 7.3 Result
+### 7.3 The unrecoverability claim, re-checked
+
+Section 1.4 established that no dropout had a surviving channel — but that was measured on
+the original 241 only. Re-running it on the 70 newly found events:
+
+| | |
+|---|---|
+| Events with an essentially intact channel (<6 dB down) | **0 / 70** |
+| Events with the least-damaged channel >20 dB down | **69 / 70** |
+| Median attenuation of the least-damaged channel | **−53.2 dB** |
+| Single-channel dropouts (one side recoverable) | **0** |
+
+Same conclusion: the damage is symmetric across channels and there is no cross-channel
+recovery path for these either.
+
+Worth recording *how* that was measured, because the first attempt got it wrong. Taking
+RMS across the whole repair span gave a median of −6.9 dB and appeared to show 25 events
+with an intact channel — which would have meant 25 repairs could have been genuinely
+recovered rather than concealed. That measurement was diluted by the recovery ramp, which
+is part of the span but is not silent. Measuring the near-silent core instead gives −53.2
+dB and no intact channels.
+
+### 7.4 Result
 
 | | v7 | v8 |
 |---|---|---|
 | Dropout-shaped deep dips remaining | 70 | **1** |
 | Repair spans | 260 | **330** |
+| Dropouts concealed | 241 | **311** |
+| Audio genuinely lost | 6.17 s | **8.52 s** (measured, not assumed) |
 | Audio touched | 18.74 s | 24.90 s |
 | Samples changed outside repairs | 0 | **0** |
 | Peak / L-R correlation | — | unchanged |
