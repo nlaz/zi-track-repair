@@ -208,6 +208,7 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 | Residual dips deeper than control p99 | — | **0** |
 | Undetected dropouts found and repaired | — | **70** |
 | Repair spans | — | **330** |
+| Fills >6 dB below surroundings (±100 ms) | — | **2** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Seams with broadband splice burst | — | **1%** |
 | Digital-silence runs introduced | — | **0** |
@@ -217,6 +218,11 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 | Full-scale samples | 0 | **0** |
 | Seam step vs neighbours, median | — | **0.21** (control 0.22) |
 | L/R correlation | 0.9525 | **0.9525** |
+
+**Fill level.** Each fill's RMS against the RMS of the **±100 ms** either side of it,
+measured on the final audio. The window matters: an earlier version of the manifest used
+±250 ms, which in a track with dynamics this steep made 12 fills look more than 6 dB down
+when only 2 are. All 330 rows are now measured uniformly at ±100 ms.
 
 **Seam step.** Each boundary's sample-to-sample step compared against the 99.5th
 percentile of steps in the surrounding ±10 ms, excluding the seam. Control points in

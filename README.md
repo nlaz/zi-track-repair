@@ -22,6 +22,7 @@ dropout's edge.
 | Dropouts | 311 | **0** |
 | Audio lost | 8.52 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
+| Fills >6 dB below surroundings | — | **2** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Samples changed outside repairs | — | **0** |
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
