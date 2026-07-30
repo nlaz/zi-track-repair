@@ -208,6 +208,7 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 | Residual dips deeper than control p99 | — | **0** |
 | Undetected dropouts found and repaired | — | **70** |
 | Repair spans | — | **330** |
+| Spans re-filled for rhythm match | — | **24** |
 | Fills >6 dB below surroundings (±100 ms) | — | **2** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Seams with broadband splice burst | — | **1%** |
@@ -499,7 +500,54 @@ hits with widening gaps. It is deliberately left alone.
 
 ---
 
-## 8. Caveats
+## 8. Rhythm: a fill can match the spectrum and still be wrong
+
+A repair at **00:19.969** was reported as having "a blip of new sound". The fill was not
+quiet, not clicky, and not spectrally far off — it passed every check in place. It was
+still wrong.
+
+That passage is a dense percussive roll: the 112 ms windows either side each contain
+**3 onsets**. The chosen fill contained **2**. In a roll, dropping a hit is an audible
+rhythmic hiccup, and the fill also carried a brighter low-frequency element than its
+surroundings — together, a blip.
+
+The scoring had no term for this. It compared *how much* energy a candidate had per band
+and *how loud* it was overall, both of which are averages over the whole fill. Neither can
+see that the energy arrives at the wrong moments.
+
+### 8.1 The added term
+
+Candidates are now also scored on **onset density** — transients per fill, against the mean
+of the equal-length windows either side:
+
+```
+score = band_error + 1.5 × level_error + 4.0 × |onsets(fill) − onsets(neighbourhood)|
+```
+
+Applied to the 47 spans whose fill was at least one onset sparser than its neighbourhood,
+re-searching with this term produced a better candidate for 24 of them. **The other 23
+were reverted** — the new candidate was kept only where it was measurably closer on
+density without being worse on level.
+
+| on the 24 accepted spans | before | after |
+|---|---|---|
+| Mean onset-density error | 1.35 | **0.27** |
+| Mean level error | 2.4 dB | **1.5 dB** |
+
+Across all 330 spans, mean absolute level error moved 1.80 → 1.76 dB, and spans more than
+6 dB *too loud* fell from 6 to 5. The reported span went from 2 onsets to 3, matching its
+neighbourhood exactly.
+
+### 8.2 Why this was invisible
+
+Every metric in the suite up to this point was an average over the fill: band energy,
+RMS level, spectral score. An average is blind to arrangement. Two fills with identical
+band energies and identical loudness can differ by having their transients in completely
+different places — which is precisely what a listener notices first in rhythmic material.
+
+---
+
+## 9. Caveats
 
 **The matched fills are not what was played.** 230 of 238 repairs contain real audio
 lifted from elsewhere in the set. They are musically plausible and spectrally continuous,
@@ -522,7 +570,7 @@ available on request; it was omitted here for size.
 
 ---
 
-## 9. Files
+## 10. Files
 
 | File | Description |
 |---|---|

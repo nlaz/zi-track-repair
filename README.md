@@ -253,6 +253,24 @@ naturally measures low against its own neighbourhood. Nothing was wrong. Without
 control, that would have been a day spent optimising against noise — the same trap as the
 two misleading metrics above, caught earlier only because the habit was already in place.
 
+### An average cannot see arrangement
+
+A fill reported as "a blip of new sound" had the right band energies, the right loudness,
+and a clean seam. It was still wrong: the passage was a dense percussive roll with 3
+onsets per 112 ms either side, and the fill had 2.
+
+Every metric in the suite at that point was an *average over the fill* — band energy, RMS
+level, spectral score. Averages are blind to arrangement. Two fills with identical energy
+per band and identical loudness can put their transients in completely different places,
+and in rhythmic material that is the first thing a listener hears.
+
+Scoring now includes onset density against the neighbourhood. Re-searching the 47 spans
+whose fill was sparser than its surroundings improved 24; the other 23 were reverted,
+since a change that is not measurably better should not ship.
+
+**Generalises to:** if the thing you are reconstructing has structure in time, at least one
+term in the objective has to measure *when*, not just *how much*.
+
 ### Every "0 remaining" is measured against an inventory
 
 Four revisions reported "241 → 0". That was true, and it was also measuring against a list
