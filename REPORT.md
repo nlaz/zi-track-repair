@@ -10,7 +10,9 @@ a repair span or its 10 ms crossfade was altered.
 > **Revision note.** The first version of this repair shipped with two systematic
 > defects — 66 fills that were audible holes, and broadband splice clicks on 98% of
 > seams. Both were spotted by eye in the spectrogram, not by the verification suite.
-> Section 4 documents what went wrong and why the original checks missed it.
+> Section 4 documents what went wrong and why the original checks missed it. A
+> subsequent **visual audit of all 238 repairs** (§5) found and fixed a third: fills in
+> bass-heavy passages were being lowpassed at 8 kHz and losing real treble.
 
 ---
 
@@ -191,6 +193,7 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 | Dropouts detected | 241 | **0** |
 | Audio lost | 6.17 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
+| Repairs visually inspected | — | **238 / 238** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Seams with broadband splice burst | — | **1%** |
 | Digital-silence runs introduced | — | **0** |
@@ -275,7 +278,79 @@ from each failure.
 
 ---
 
-## 5. Caveats
+## 5. Visual audit of all 238 repairs
+
+After two defects had been found by eye rather than by measurement, every repair was
+rendered as a before/after spectrogram pair (±800 ms, 0–24 kHz, fixed dB scale) and
+inspected individually across 20 contact sheets. Objective metrics — fill level, per-band
+error, seam burst — were printed on each cell so the visual read could be cross-checked
+against numbers.
+
+**Result: 235 of 238 clean. One real defect found, one known-weak repair confirmed, one
+false alarm.**
+
+### 5.1 Defect found: fills lowpassed at 8 kHz
+
+Four repairs showed a dark rectangle in the AFTER spectrogram — content cut above a
+horizontal line inside the span, where the BEFORE had content. That shape is the
+signature of a lowpass, which pointed straight at the ceiling-matching step.
+
+The cause was in `local_ceiling`, which took the highest frequency within 70 dB of the
+**spectral peak**. In a bass-heavy passage the peak is the bass, so everything above
+8 kHz fell below that threshold and the estimate collapsed onto its 8 kHz clamp. The
+fill was then lowpassed at 8 kHz, stripping legitimate treble. **17 fills had a ceiling
+below 14 kHz**; three sat at the 8 kHz floor.
+
+Two changes fixed it:
+
+- **Detect the codec cliff, not a level.** The ceiling is now found by locating the
+  steepest drop (>20 dB across ~1 kHz) in the smoothed context spectrum above 9 kHz. If
+  no cliff exists, no filtering is applied at all.
+- **Trim excess only.** The fill is filtered only if its energy above the ceiling exceeds
+  the context's by more than 6 dB — so the step can remove foreign brightness but can
+  never remove content the fill legitimately shares with its surroundings.
+
+Measured on the affected spans, 8–18 kHz energy relative to context:
+
+| Repair | before fix | after fix |
+|---|---|---|
+| 30:51.751 | −3.8 dB | **+1.5 dB** |
+| 02:00.505 | −4.4 dB | **−1.8 dB** |
+| 56:29.060 | −20.4 dB | **+4.3 dB** |
+
+### 5.2 False alarm: the high-frequency "deficit"
+
+A follow-up measurement suggested a wider problem: 95 of 238 fills sat more than 6 dB
+below their context in the 10–15 kHz band, 60 of them more than 10 dB down.
+
+A control settled it. Six hundred **undamaged** windows, drawn at the same distribution
+of durations from clean parts of the same track and measured the same way, scored a
+median of **−6.9 dB with 41% below −10 dB** — worse than the repaired fills at −3.8 dB
+and 25%. A Mann-Whitney test on "are repaired fills dimmer than natural windows" returns
+**p = 1.000**.
+
+The deficit is an artefact of the metric, not a property of the repairs: a 20–100 ms
+window that happens to fall between hi-hat transients naturally measures well below its
+own ±150 ms neighbourhood. Without the control this would have been a day spent
+optimising against noise.
+
+### 5.3 Confirmed weak: 26:45.658
+
+The one repair known to be poor was confirmed visually and numerically (−13 dB level,
+−10.3 dB at 10–18 kHz). Widening the span and re-searching did not improve it; no
+comparable passage exists nearby. It remains the single worst fill in the track.
+
+### 5.4 One visual misread, corrected
+
+At contact-sheet scale, 56:29.060 appeared to have a dark block. Rendered at full size it
+is **+4.3 dB brighter** than its surroundings — a texture difference from the exemplar,
+not a hole. Worth recording: low-resolution visual screening produces false positives as
+well as true ones, and every flag was re-checked at full resolution before being acted
+on.
+
+---
+
+## 6. Caveats
 
 **The matched fills are not what was played.** 230 of 238 repairs contain real audio
 lifted from elsewhere in the set. They are musically plausible and spectrally continuous,
@@ -298,7 +373,7 @@ available on request; it was omitted here for size.
 
 ---
 
-## 6. Files
+## 7. Files
 
 | File | Description |
 |---|---|

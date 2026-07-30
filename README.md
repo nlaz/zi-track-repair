@@ -22,6 +22,7 @@ dropout's edge.
 | Fills >10 dB below surroundings | 41 | **1** |
 | Samples changed outside repairs | — | **0** |
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
+| Repairs visually inspected | — | **238 / 238** |
 
 `REPORT.md` is the formal technical report. This file is the working narrative: how the
 job actually went, including what went wrong.
@@ -95,6 +96,20 @@ Final approach: build **eight candidate fills** per gap — six best-matching pa
 elsewhere in the track, a pitch-synchronous repeat, an AR interpolation — and score each on
 how well its energy matches the surrounding music band by band. Best score wins, which
 chose a real passage 230 times, a periodic repeat 8 times, and AR never.
+
+### 7. Inspect every repair by eye
+
+After two defects had been caught visually rather than by measurement, all 238 repairs
+were rendered as before/after spectrogram pairs and inspected individually across 20
+contact sheets, with the objective metrics printed on each cell.
+
+That pass found a third defect: in bass-heavy passages the ceiling estimator collapsed
+onto its 8 kHz clamp and the fill was lowpassed at 8 kHz, stripping real treble
+(17 fills had a ceiling below 14 kHz). Fixed by detecting the codec's lowpass *cliff*
+rather than a level threshold, and by filtering only genuine excess. Full detail in
+`REPORT.md` §5.
+
+Final state: **235 of 238 clean, one known-weak repair (26:45.658), one false alarm.**
 
 ---
 
@@ -172,10 +187,31 @@ The residual-repair pass kept re-filling the same span using the same stale boun
 never converged. Re-deriving the span from the *repaired* audio each round fixed it. Cap
 the rounds, and change something each time.
 
+### Screen with a cheap metric, confirm with an expensive one
+
+The visual audit produced both true and false positives. One flagged cell looked like a
+dark hole at contact-sheet scale and turned out to be **+4.3 dB brighter** than its
+surroundings when rendered full size. Low-resolution screening is the right way to cover
+238 items, but every flag has to be re-checked at full resolution before it is acted on —
+otherwise you fix things that were never broken.
+
+### A suspicious measurement needs a control before it needs a fix
+
+A follow-up metric showed 95 of 238 fills more than 6 dB down in the 10–15 kHz band, which
+looked like a systemic problem. Six hundred **undamaged** windows of the same durations
+from the same track scored *worse* — median −6.9 dB against the repairs' −3.8 dB, with
+Mann-Whitney p = 1.000 for "repairs are dimmer".
+
+The deficit was an artefact: a 20–100 ms window landing between hi-hat transients
+naturally measures low against its own neighbourhood. Nothing was wrong. Without the
+control, that would have been a day spent optimising against noise — the same trap as the
+two misleading metrics above, caught earlier only because the habit was already in place.
+
 ### The eye caught what the metrics missed
 
-Both systematic defects were visible in a spectrogram before any measurement flagged them,
-and both were first spotted by the client rather than the test suite. Every metric involved
+All three systematic defects were visible in a spectrogram before any measurement flagged
+them; the first two were spotted by the client rather than the test suite, and the third by
+a deliberate visual audit of every repair. Every metric involved
 was measuring something true but too narrow. Rendering the artefact and looking at it
 remains the cheapest and most general check available — which is why the comparison page
 shows spectrograms rather than only reporting numbers.
