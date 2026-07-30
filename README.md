@@ -16,12 +16,13 @@ dropout's edge.
 
 | | Before | After |
 |---|---|---|
-| Dropouts | 241 | **0** |
+| Dropouts | 311 | **0** |
 | Audio lost | 6.17 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Samples changed outside repairs | — | **0** |
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
+| Dropouts found (241 detected + 70 missed) | 311 | — |
 | Repairs visually inspected | — | **238 / 238** |
 | Residual damage after repair | — | **0** |
 
@@ -125,8 +126,17 @@ A level-based residual scan now catches this shape, with its threshold set from 
 residuals out of 337 candidate dips; repairing them took three rounds and 22 extra spans.
 Detail in `REPORT.md` §6.
 
-**Final: 260 repair spans, 12.5 s of fill, no residual damage detectable by any of the
-four checks.**
+### 9. Question the inventory, not just the work
+
+A gap spotted in the spectrogram at 2:18 was a dropout that appeared in no detection and
+no repair span. The detector required the level before the cliff to exceed −25 dBFS — a
+guard against false positives in quiet passages, whose side effect was that **any dropout
+in a quieter section was excluded by construction**. A rescan by floor-relative-to-
+surroundings found **70 more**, taking the real total from 241 to 311. Detail in
+`REPORT.md` §7.
+
+**Final: 330 repair spans, 17.1 s of fill, 311 dropouts concealed, one deep dip left in
+place because it is music.**
 
 ---
 
@@ -223,6 +233,25 @@ The deficit was an artefact: a 20–100 ms window landing between hi-hat transie
 naturally measures low against its own neighbourhood. Nothing was wrong. Without the
 control, that would have been a day spent optimising against noise — the same trap as the
 two misleading metrics above, caught earlier only because the habit was already in place.
+
+### Every "0 remaining" is measured against an inventory
+
+Four revisions reported "241 → 0". That was true, and it was also measuring against a list
+that was missing 70 dropouts — excluded by a guard in the detector that built the list in
+the first place. A completion metric can only be as complete as the inventory underneath
+it, and the inventory is the thing least likely to get re-examined, because every
+downstream number depends on it and they all keep agreeing with each other.
+
+**Generalises to:** when a system reports "all known issues resolved", the question worth
+asking is not whether they were resolved but how *known* was defined — and specifically
+what the discovery step was built to ignore.
+
+### A guard against false positives is a decision about what you will never see
+
+The −25 dBFS pre-level condition was a reasonable choice: it stops quiet passages
+generating noise in the detections. But a filter that prevents false positives at
+detection time removes those cases from every subsequent stage, silently. If a guard like
+that is necessary, the cases it excludes need their own pass — not just a comment.
 
 ### One detector sees one failure shape
 

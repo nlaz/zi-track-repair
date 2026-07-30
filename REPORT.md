@@ -3,7 +3,8 @@
 **Source:** `1784253717886.mp3` — 65:45, 48 kHz stereo, 192 kbps CBR MP3, 94.7 MB
 **Reported symptom:** "the track is skipping and has clipping artifacts"
 
-**Outcome:** 241 dropouts (6.17 s of missing audio) concealed across 260 repair spans.
+**Outcome:** 311 dropouts concealed across 330 repair spans. The original detector found
+241 of them; a later scan found 70 more that it had been built to exclude (§7).
 Zero dropouts remain, fills sit level with the surrounding music, and no sample outside
 a repair span or its 10 ms crossfade was altered.
 
@@ -14,7 +15,9 @@ a repair span or its 10 ms crossfade was altered.
 > subsequent **visual audit of all 238 repairs** (§5) found and fixed a third: fills in
 > bass-heavy passages were being lowpassed at 8 kHz and losing real treble. A fourth,
 > reported by ear at 41:50–41:53, is documented in §6: some spans stopped short and left
-> part of the dropout unrepaired.
+> part of the dropout unrepaired. A fifth, reported from the spectrogram at 2:18, is
+> documented in §7 and is the most consequential: **70 dropouts were never detected at
+> all**, because the detector required loud music before the cliff.
 
 ---
 
@@ -197,6 +200,7 @@ correlation between a gap's surroundings and its chosen source averages 0.62.)*
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
 | Repairs visually inspected | — | **238 / 238** |
 | Residual dips deeper than control p99 | — | **0** |
+| Undetected dropouts found and repaired | — | **70** |
 | Fills >10 dB below surroundings | 41 | **1** |
 | Seams with broadband splice burst | — | **1%** |
 | Digital-silence runs introduced | — | **0** |
@@ -399,7 +403,66 @@ and "fixing" all of them would have replaced 9.7 s of undamaged music.
 
 ---
 
-## 7. Caveats
+## 7. Dropouts the detector was built to miss
+
+A gap visible in the spectrogram at 2:18 turned out to be a dropout at **02:19.554** that
+appears in neither the 241 detections nor any repair span. It was never detected.
+
+### 7.1 The cause
+
+The detector required the level immediately before the cliff to exceed **−25 dBFS**:
+
+```
+if db[i-1] > -25 and db[i] < db[i-1] - 32:
+```
+
+That guard was there to stop quiet passages producing false positives. Its side effect is
+that **any dropout landing in a quieter section of the music was excluded by
+construction** — never counted, never given a span, never repaired. The "241 → 0" reported
+in earlier revisions was measured against an inventory that had this hole in it.
+
+### 7.2 Finding them
+
+Dropouts collapse to near-digital-silence while music does not, so the track was rescanned
+for regions whose floor reaches near silence *relative to their own surroundings*, with no
+absolute loudness requirement. That produced 88 candidates.
+
+Roughly half were not damage. Quiet passages, intros and breakdowns also sit far below a
+±2 s sliding reference dominated by adjacent loud music — including **30:41.926**, the
+passage identified as musical back in the very first analysis. Rendering the longest
+candidates made the split obvious by eye, and a rule was then fitted to match that
+judgement:
+
+- floor at or below **−60 dBFS**,
+- surroundings at least **40 dB above the floor** on *both* sides,
+- surroundings themselves above −30 dBFS (so we are not inside a quiet section),
+- duration ≤ 260 ms.
+
+The relative form matters. An absolute "must be loud before and after" gate rejected real
+dropouts whose neighbour was itself damaged; requiring the floor to be far below its own
+surroundings does not.
+
+**70 accepted, 18 rejected.** A sample spread across the whole track was re-rendered and
+every one was a dropout: full-height dark band, envelope collapsing to −50/−90 dBFS, loud
+music either side.
+
+### 7.3 Result
+
+| | v7 | v8 |
+|---|---|---|
+| Dropout-shaped deep dips remaining | 70 | **1** |
+| Repair spans | 260 | **330** |
+| Audio touched | 18.74 s | 24.90 s |
+| Samples changed outside repairs | 0 | **0** |
+| Peak / L-R correlation | — | unchanged |
+
+The single remaining dip is **30:41.986**, and it is music: the fall into it is a gradual
+250 ms decay rather than a 2 ms cliff, and the waveform shows a run of decaying percussive
+hits with widening gaps. It is deliberately left alone.
+
+---
+
+## 8. Caveats
 
 **The matched fills are not what was played.** 230 of 238 repairs contain real audio
 lifted from elsewhere in the set. They are musically plausible and spectrally continuous,
@@ -422,7 +485,7 @@ available on request; it was omitted here for size.
 
 ---
 
-## 8. Files
+## 9. Files
 
 | File | Description |
 |---|---|
