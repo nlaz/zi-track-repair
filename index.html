@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Track repair — before &amp; after</title>
-<meta name="description" content="Dropout analysis and repair of a 66-minute stream capture: 311 dropouts concealed, verified, with live before/after spectrograms.">
+<title>Track review — before &amp; after</title>
+<meta name="description" content="Review tool for a repaired 66-minute capture: A/B the whole track against the original with live spectrograms, spot-check eight repairs close up, and inspect all 330 repaired spans.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23161E28'/%3E%3Cpath d='M1 8h4M11 8h4' stroke='%2354B3C4' stroke-width='2'/%3E%3Cpath d='M6 8h4' stroke='%23E0A55F' stroke-width='2' stroke-dasharray='1 1'/%3E%3C/svg%3E">
 <style>
 *,*::before,*::after{box-sizing:border-box}
 :root{
@@ -12,7 +13,7 @@
   --ink:#16202E; --ink-soft:#525E6E; --ink-faint:#818C9B;
   --rule:#D2D9E2; --rule-soft:#E2E7ED;
   --measured:#2D6E7E; --inferred:#B87333; --missing:#A4404A;
-  --scope:#0B1016; --shade:rgba(164,64,74,.09);
+  --scope:#0B1016;
 }
 @media (prefers-color-scheme:dark){
   :root{
@@ -20,7 +21,7 @@
     --ink:#DCE3EC; --ink-soft:#95A1B0; --ink-faint:#6D7987;
     --rule:#27313E; --rule-soft:#1F2833;
     --measured:#54B3C4; --inferred:#E0A55F; --missing:#D4737B;
-    --scope:#070B10; --shade:rgba(212,115,123,.12);
+    --scope:#070B10;
   }
 }
 :root{
@@ -30,33 +31,37 @@
 html{-webkit-text-size-adjust:100%}
 body{margin:0; background:var(--paper); color:var(--ink);
   font-family:var(--serif); font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased;}
-.wrap{max-width:1040px; margin:0 auto; padding:0 1.5rem 6rem;}
-.col{max-width:64ch;}
+.wrap{max-width:1040px; margin:0 auto; padding:0 1.5rem 5rem;}
 h1,h2{font-weight:600; text-wrap:balance; margin:0; line-height:1.22;}
-h1{font-size:2.5rem; letter-spacing:-.018em;}
-h2{font-size:1.4rem; letter-spacing:-.008em;}
+h1{font-size:2.1rem; letter-spacing:-.018em;}
+h2{font-size:1.25rem; letter-spacing:-.008em;}
 p{margin:0;}
 a{color:var(--measured);}
 .eyebrow{font-family:var(--mono); font-size:.68rem; letter-spacing:.17em;
   text-transform:uppercase; color:var(--ink-faint);}
-header.mast{padding:4.5rem 0 0; display:grid; gap:.7rem;}
-.standfirst{font-size:1.14rem; color:var(--ink-soft); max-width:54ch;}
-hr.rule{border:0; border-top:1px solid var(--rule); margin:2.4rem 0 0;}
-section{display:grid; gap:1.1rem; margin-top:2.6rem;}
-.sechead{display:grid; gap:.4rem;}
+header.mast{padding:3.4rem 0 0; display:grid; gap:.55rem;}
+hr.rule{border:0; border-top:1px solid var(--rule); margin:1.9rem 0 0;}
+section{display:grid; gap:.9rem; margin-top:2.4rem;}
+.sechead{display:flex; align-items:baseline; gap:.8rem; flex-wrap:wrap;}
+.sechead .note{font-family:var(--mono); font-size:.7rem; color:var(--ink-faint);}
 
-.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+/* ---------- stat strip ---------- */
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
   gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:2px;}
-.stats > div{background:var(--panel); padding:1rem 1.1rem; display:grid; gap:.3rem;}
-.stats .n{font-family:var(--mono); font-size:1.65rem; line-height:1; font-variant-numeric:tabular-nums;}
-.stats .n.good{color:var(--measured);} .stats .n.bad{color:var(--missing);}
-.stats .lab{font-family:var(--mono); font-size:.63rem; letter-spacing:.12em;
+.stats > div{background:var(--panel); padding:.85rem 1.1rem; display:grid; gap:.25rem;}
+.stats .n{font-family:var(--mono); font-size:1.3rem; line-height:1.15;
+  font-variant-numeric:tabular-nums; display:flex; align-items:baseline; gap:.4rem;}
+.stats .n i{font-style:normal; color:var(--missing);}
+.stats .n s{text-decoration:none; color:var(--ink-faint); font-size:.9rem;}
+.stats .n b{font-weight:600; color:var(--measured);}
+.stats .n em{font-style:normal; color:var(--ink);}
+.stats .lab{font-family:var(--mono); font-size:.62rem; letter-spacing:.12em;
   text-transform:uppercase; color:var(--ink-faint);}
 
-/* ---------- player ---------- */
-.player{border:1px solid var(--rule); border-radius:2px; background:var(--panel); overflow:hidden;}
-.pbody{padding:1.1rem;}
-.transport{display:flex; align-items:center; gap:.85rem; flex-wrap:wrap; padding-bottom:.9rem;}
+/* ---------- shared panel + transport ---------- */
+.panel{border:1px solid var(--rule); border-radius:2px; background:var(--panel); overflow:hidden;}
+.pbody{padding:1rem 1.1rem;}
+.transport{display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; padding-bottom:.85rem;}
 button.play{font-family:var(--mono); font-size:.8rem; cursor:pointer;
   background:var(--ink); color:var(--paper); border:1px solid var(--ink);
   border-radius:1px; padding:.5rem 1.1rem; min-width:7.2rem;}
@@ -72,6 +77,17 @@ button.play[disabled]{opacity:.5; cursor:progress;}
 .tcode{font-family:var(--mono); font-size:.75rem; color:var(--ink-soft);
   font-variant-numeric:tabular-nums; margin-left:auto;}
 canvas{display:block; width:100%; height:auto;}
+.skips{display:flex; gap:.3rem;}
+.skips button{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
+  background:var(--panel-2); border:1px solid var(--rule); border-radius:1px;
+  padding:.5rem .6rem; cursor:pointer; min-width:3rem;}
+.skips button:hover{color:var(--ink); border-color:var(--ink-faint);}
+button:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
+.legend{font-family:var(--mono); font-size:.68rem; line-height:1.6; color:var(--ink-faint);
+  padding:.6rem 1.1rem; border-top:1px solid var(--rule-soft); background:var(--panel-2);}
+.legend b{color:var(--ink-soft); font-weight:500;}
+
+/* ---------- main player ---------- */
 .scrub{position:relative; margin-top:.2rem;}
 canvas.timeline{cursor:ew-resize; border:1px solid var(--rule-soft); border-radius:1px;
   touch-action:none;}
@@ -82,14 +98,7 @@ canvas.timeline:focus-visible{outline:2px solid var(--inferred); outline-offset:
   opacity:0; transition:opacity .12s;}
 .tip.on{opacity:1;}
 .tip b{color:var(--inferred); font-weight:500;}
-.skips{display:flex; gap:.3rem;}
-.skips button{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
-  background:var(--panel-2); border:1px solid var(--rule); border-radius:1px;
-  padding:.5rem .6rem; cursor:pointer; min-width:3rem;}
-.skips button:hover{color:var(--ink); border-color:var(--ink-faint);}
-
-/* the two spectrograms are flush-stacked so one instant reads as one column */
-.scopes{position:relative; margin-top:.9rem; border:1px solid var(--rule-soft);
+.scopes{position:relative; margin-top:.85rem; border:1px solid var(--rule-soft);
   border-radius:1px; overflow:hidden; background:var(--scope);}
 .scope{position:relative; display:block;}
 .scope + .scope{border-top:1px solid rgba(255,255,255,.22);}
@@ -101,111 +110,97 @@ canvas.timeline:focus-visible{outline:2px solid var(--inferred); outline-offset:
 .scope .hz{position:absolute; top:.35rem; right:.5rem; font-family:var(--mono);
   font-size:.58rem; color:rgba(255,255,255,.45); pointer-events:none;}
 #ovl{position:absolute; inset:0; pointer-events:none; z-index:2;}
-.jump{display:flex; flex-wrap:wrap; gap:.3rem; padding:1rem 1.1rem; max-height:9.5rem;
-  overflow-y:auto; border-top:1px solid var(--rule-soft); background:var(--panel-2);}
-.jump button{font-family:var(--mono); font-size:.71rem; color:var(--ink-soft);
+.player.flash{outline:2px solid var(--inferred); outline-offset:-1px;}
+
+/* ---------- close-ups ---------- */
+.pick{display:flex; flex-wrap:wrap; gap:.3rem; padding:.85rem 1.1rem;
+  border-bottom:1px solid var(--rule-soft); background:var(--panel-2);}
+.pick button{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
   background:var(--panel); border:1px solid var(--rule); border-radius:1px;
-  padding:.34rem .5rem; cursor:pointer; display:inline-flex; gap:.35rem; align-items:baseline;}
-.jump button i{font-style:normal; font-size:.62rem; color:var(--inferred);}
-.jump button:hover{color:var(--ink); border-color:var(--ink-faint);}
-.jump .lbl{font-family:var(--mono); font-size:.62rem; letter-spacing:.13em;
-  text-transform:uppercase; color:var(--ink-faint); align-self:center; margin-right:.4rem;}
-button:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
-.caption{font-family:var(--mono); font-size:.71rem; line-height:1.55; color:var(--ink-faint);
-  padding:.8rem 1.1rem; border-top:1px solid var(--rule-soft); background:var(--panel-2);}
-.caption b{color:var(--ink-soft); font-weight:500;}
-
-/* ---------- static gallery ---------- */
-.gal{border:1px solid var(--rule); border-radius:2px; background:var(--panel); overflow:hidden;}
-.galpick{display:flex; flex-wrap:wrap; gap:.3rem; padding:1rem 1.1rem;
-  border-bottom:1px solid var(--rule-soft);}
-.galpick button{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
-  background:var(--panel-2); border:1px solid var(--rule); border-radius:1px;
   padding:.36rem .58rem; cursor:pointer;}
-.galpick button[aria-pressed=true]{background:var(--ink); color:var(--paper); border-color:var(--ink);}
-.galgrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule-soft);}
-@media (max-width:700px){.galgrid{grid-template-columns:1fr;}}
-.galgrid figure{margin:0; background:var(--panel); padding:.7rem;}
-.galgrid figcaption{font-family:var(--mono); font-size:.63rem; letter-spacing:.12em;
-  text-transform:uppercase; padding-bottom:.45rem;}
-.galgrid .b figcaption{color:var(--missing);} .galgrid .a figcaption{color:var(--measured);}
-.galgrid img{display:block; width:100%; height:auto; border-radius:1px;}
+.pick button[aria-pressed=true]{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+.stills{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule-soft);}
+@media (max-width:760px){.stills{grid-template-columns:1fr;}}
+.stills figure{margin:0; background:var(--panel); padding:.7rem;}
+.stills figcaption{font-family:var(--mono); font-size:.62rem; letter-spacing:.12em;
+  text-transform:uppercase; padding-bottom:.4rem;}
+.stills .b figcaption{color:var(--missing);} .stills .a figcaption{color:var(--measured);}
+.stills img{display:block; width:100%; height:auto; border-radius:1px;}
+canvas.env{border:1px solid var(--rule-soft); border-radius:1px; cursor:pointer;
+  background:var(--scope); touch-action:none;}
+canvas.env:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
 
-.tablewrap{overflow-x:auto;}
-table{border-collapse:collapse; width:100%; font-family:var(--mono); font-size:.76rem;
-  font-variant-numeric:tabular-nums;}
-th,td{padding:.5rem .7rem; text-align:right; white-space:nowrap;}
-th{font-weight:500; color:var(--ink-faint); font-size:.68rem; letter-spacing:.06em;
-  text-transform:uppercase; border-bottom:1px solid var(--rule);}
-th:first-child,td:first-child{text-align:left; color:var(--ink-soft);}
-tbody tr + tr td{border-top:1px solid var(--rule-soft);}
-td.ok{color:var(--measured);} td.no{color:var(--missing);}
-.callout{border-left:2px solid var(--inferred); padding:.15rem 0 .15rem 1.1rem;
-  color:var(--ink-soft); font-size:.96rem; display:grid; gap:.6rem;}
-.callout b{color:var(--ink);}
+/* ---------- repair table ---------- */
+.filters{display:flex; flex-wrap:wrap; gap:.3rem; align-items:center;
+  padding:.85rem 1.1rem; border-bottom:1px solid var(--rule-soft); background:var(--panel-2);}
+.filters button{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
+  background:var(--panel); border:1px solid var(--rule); border-radius:1px;
+  padding:.36rem .58rem; cursor:pointer;}
+.filters button[aria-pressed=true]{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+.filters .count{font-family:var(--mono); font-size:.68rem; color:var(--ink-faint); margin-left:auto;}
+.tscroll{max-height:27rem; overflow:auto;}
+table{border-collapse:separate; border-spacing:0; width:100%; font-family:var(--mono);
+  font-size:.74rem; font-variant-numeric:tabular-nums;}
+thead th{position:sticky; top:0; z-index:1; background:var(--panel);
+  font-weight:500; color:var(--ink-faint); font-size:.64rem; letter-spacing:.08em;
+  text-transform:uppercase; text-align:right; padding:.55rem .7rem;
+  border-bottom:1px solid var(--rule); white-space:nowrap; cursor:pointer; user-select:none;}
+thead th:first-child{text-align:left;}
+thead th[aria-sort=ascending]::after{content:" ▲"; color:var(--inferred);}
+thead th[aria-sort=descending]::after{content:" ▼"; color:var(--inferred);}
+tbody td{padding:.32rem .7rem; text-align:right; white-space:nowrap;
+  border-bottom:1px solid var(--rule-soft); color:var(--ink-soft);}
+tbody td:first-child{text-align:left;}
+tbody tr:hover td{background:var(--panel-2);}
+tbody tr.on td{background:var(--panel-2);}
+tbody tr.on td:first-child{box-shadow:inset 2px 0 0 var(--inferred);}
+td .tm{font:inherit; color:var(--ink); background:none; border:0; padding:0;
+  cursor:pointer; text-decoration:underline; text-decoration-color:var(--rule);
+  text-underline-offset:3px;}
+td .tm:hover{text-decoration-color:var(--inferred);}
+td.quiet{color:var(--missing);}
+td .cu{font:inherit; font-size:.66rem; color:var(--inferred); background:none;
+  border:1px solid var(--rule); border-radius:1px; padding:.08rem .34rem; cursor:pointer;}
+td .cu:hover{border-color:var(--inferred);}
+
+/* ---------- downloads ---------- */
 .dl{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1px;
   background:var(--rule); border:1px solid var(--rule); border-radius:2px;}
-.dl a{background:var(--panel); padding:1rem 1.1rem; display:grid; gap:.25rem;
+.dl a{background:var(--panel); padding:.9rem 1.1rem; display:grid; gap:.2rem;
   text-decoration:none; color:inherit;}
 .dl a:hover{background:var(--panel-2);}
 .dl .t{font-weight:600; font-size:.95rem;}
-.dl .s{font-family:var(--mono); font-size:.68rem; color:var(--ink-faint);}
-footer{margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
-  font-size:.85rem; color:var(--ink-soft);}
-code{font-family:var(--mono); font-size:.86em;}
+.dl .s{font-family:var(--mono); font-size:.66rem; color:var(--ink-faint);}
+footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
+  font-family:var(--mono); font-size:.7rem; line-height:1.7; color:var(--ink-faint);}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header class="mast">
-  <div class="eyebrow">Audio restoration &middot; before &amp; after</div>
-  <h1>311 dropouts, concealed and verified</h1>
-  <p class="standfirst">A 66-minute set captured from an RTMP stream lost audio in 311
-  separate places. None of it was recoverable. All of it is now inaudible. Play either
-  version below and watch both spectrograms scroll past the playhead.</p>
+  <div class="eyebrow">Track review &middot; 65:45 &middot; 48 kHz stereo</div>
+  <h1>Before and after, every repair</h1>
 </header>
 
 <hr class="rule">
 
 <section>
   <div class="stats">
-    <div><span class="n bad">311</span><span class="lab">dropouts found</span></div>
-    <div><span class="n good">0</span><span class="lab">dropouts remaining</span></div>
-    <div><span class="n">24.90 s</span><span class="lab">audio touched</span></div>
-    <div><span class="n good">0</span><span class="lab">samples altered elsewhere</span></div>
+    <div><span class="n"><i>311</i><s>&rarr;</s><b>0</b></span><span class="lab">dropouts</span></div>
+    <div><span class="n"><i>8.52 s</i><s>&rarr;</s><b>0.00 s</b></span><span class="lab">audio lost</span></div>
+    <div><span class="n"><b>0</b></span><span class="lab">samples changed outside repairs</span></div>
+    <div><span class="n"><em>&minus;0.32 dBFS</em></span><span class="lab">peak, unchanged</span></div>
   </div>
-</section>
-
-<section class="col">
-  <div class="sechead">
-    <div class="eyebrow">What was actually wrong</div>
-    <h2>The skipping was real. The clipping was not.</h2>
-  </div>
-  <p>The report of &ldquo;skipping and clipping artifacts&rdquo; turned out to be one
-  defect, misattributed. There were 311 genuine dropouts — the stream cutting out for a
-  median of 18&nbsp;ms at a time, getting worse as the session ran on. The first scan
-  found 241 of them; it had been written to require loud music before each cliff, which
-  meant every dropout landing in a quieter passage was excluded before anything else ran.
-  A later scan by <em>floor relative to surroundings</em> found the other 70.</p>
-  <p>But there was no clipping anywhere in the file: peak level &minus;0.32&nbsp;dBFS,
-  zero full-scale samples, zero flat-topped waveforms at any level, and a true peak of
-  &minus;0.29&nbsp;dBTP with no inter-sample overs. What sounded like clipping was the
-  transient at each dropout's edge — a 45&nbsp;dB collapse inside 2&nbsp;ms produces a
-  click that reads as distortion by ear. Chasing a limiter would have found nothing.</p>
 </section>
 
 <section>
-  <div class="sechead col">
-    <div class="eyebrow">The whole track, either version</div>
-    <h2>Play it and watch both spectrograms</h2>
+  <div class="sechead">
+    <h2>The whole track</h2>
+    <span class="note">both versions stream in sync &mdash; switching never jumps</span>
   </div>
-  <p class="col">Both full-length versions stream together, locked to the same position.
-  You hear whichever one is selected; <b>both</b> spectrograms keep drawing, so the damage
-  and the repair are visible side by side at the same instant. Switch mid-playback —
-  nothing jumps.</p>
 
-  <div class="player">
+  <div class="panel player">
     <div class="pbody">
       <div class="transport">
         <button class="play" id="play" type="button">&#9654;&nbsp; Play</button>
@@ -239,131 +234,93 @@ code{font-family:var(--mono); font-size:.86em;}
       </div>
     </div>
 
-    <div class="jump" id="jump"><span class="lbl">jump to &middot; 40 longest repairs</span></div>
-
-    <div class="caption">
-      The playhead sits in the <b>middle</b> of the spectrograms, so you see several
-      seconds either side of the current instant — including what is about to happen.
-      Amber bands mark repairs as they approach. Drag the timeline to scrub, or click; it
-      snaps to a repair when you land near one.
-      Arrow keys step 5&nbsp;s, shift-arrow 30&nbsp;s. Ticks mark all <b>330</b> repairs.
-      The two spectrograms are stacked and share one time axis, so a single instant is one
-      vertical column across both — <b>0&ndash;24&nbsp;kHz</b>, low frequencies at the
-      bottom of each. On <b>before</b> a dropout is a full-height dark notch; on
-      <b>after</b> the same column is continuous. Streaming two 95&nbsp;MB files — give it
-      a moment on a slow connection.
+    <div class="legend">
+      Playhead centred &mdash; you see several seconds either side, including what is about
+      to happen. <b>Amber</b> marks a repair; a dropout is a full-height dark notch on
+      <b>before</b> and a continuous column on <b>after</b>. Drag the timeline to scrub
+      (it snaps to a repair), arrows step 5&nbsp;s, shift-arrow 30&nbsp;s. Ticks mark all
+      330 repaired spans. Streaming two 95&nbsp;MB files &mdash; give it a moment.
     </div>
   </div>
 </section>
 
 <section>
-  <div class="sechead col">
-    <div class="eyebrow">Frozen for close reading</div>
-    <h2>Eight repairs, side by side</h2>
+  <div class="sechead">
+    <h2>Spot-check a repair</h2>
+    <span class="note">8-second excerpts &mdash; play instantly, nothing to stream</span>
   </div>
-  <p class="col">The same comparison as still images, at higher resolution than the live
-  view and without streaming anything. These eight are the spans where the first version
-  of the repair failed worst.</p>
-  <div class="gal">
-    <div class="galpick" id="galpick" role="group" aria-label="Choose a repair"></div>
-    <div class="galgrid">
+
+  <div class="panel" id="closeup">
+    <div class="pick" id="pick" role="group" aria-label="Choose a repair to inspect"></div>
+
+    <div class="pbody">
+      <div class="transport">
+        <button class="play" id="explay" type="button">&#9654;&nbsp; Play</button>
+        <div class="toggle" role="group" aria-label="Which version you hear">
+          <button type="button" id="exb" data-v="before">Before</button>
+          <button type="button" id="exa" data-v="after">After</button>
+        </div>
+        <span class="hint" id="exhint">hearing the repaired excerpt</span>
+        <span class="tcode" id="extcode">0.0 / 8.0 s</span>
+      </div>
+      <canvas class="env" id="env" height="84" tabindex="0" role="slider"
+              aria-label="Excerpt position" aria-valuemin="0" aria-valuemax="8"
+              aria-valuenow="0" aria-valuetext="0.0 s"></canvas>
+    </div>
+
+    <div class="stills">
       <figure class="b"><figcaption>Before &mdash; damaged</figcaption>
         <img id="imgB" alt="Spectrogram before repair" width="720" height="240"></figure>
       <figure class="a"><figcaption>After &mdash; repaired</figcaption>
         <img id="imgA" alt="Spectrogram after repair" width="720" height="240"></figure>
     </div>
-    <div class="caption" id="galcap"></div>
-  </div>
-</section>
 
-<section class="col">
-  <div class="sechead">
-    <div class="eyebrow">How each hole was filled</div>
-    <h2>Two methods, chosen by measurement</h2>
+    <div class="legend" id="excap"></div>
   </div>
-  <p>Nothing here recovers lost data — it never arrived and there was no redundancy to
-  rebuild it from. Both channels were more than 20&nbsp;dB down in 235 of the 241 events,
-  so even cross-channel reconstruction was impossible. What the repair does is invent
-  audio convincing enough that the seam disappears.</p>
-  <p>Which method wins depends on gap length, and that was measured rather than assumed:
-  a clean passage was cut open, filled by each method, and scored against the audio
-  deliberately removed.</p>
-  <div class="tablewrap">
-    <table>
-      <caption class="eyebrow" style="text-align:left;padding-bottom:.6rem">Per-band energy error in dB &middot; lower is better</caption>
-      <thead><tr><th>Gap</th><th>Silence</th><th>Linear</th><th>Period repeat</th><th>AR model</th><th>Beat exemplar</th></tr></thead>
-      <tbody>
-        <tr><th>5 ms</th><td class="no">116.0</td><td>18.8</td><td>10.5</td><td class="ok">3.9</td><td>6.5</td></tr>
-        <tr><th>18 ms</th><td class="no">112.3</td><td>40.5</td><td>27.7</td><td>18.4</td><td class="ok">9.0</td></tr>
-        <tr><th>50 ms</th><td class="no">109.4</td><td>44.2</td><td>23.4</td><td>34.8</td><td class="ok">18.5</td></tr>
-        <tr><th>134 ms</th><td class="no">115.4</td><td>57.7</td><td>23.9</td><td>45.7</td><td class="ok">17.9</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>Rather than pick a method from gap length alone, every gap gets <b>eight candidate
-  fills</b> — the six best-matching passages from elsewhere in the track, a
-  pitch-synchronous repeat of its own neighbours, and an AR interpolation — each scored on
-  how closely its energy matches the surrounding music band by band. The best-scoring
-  candidate wins. In practice that chooses a real passage from elsewhere in the set
-  <b>230</b> times and a pitch-synchronous repeat <b>8</b> times; autoregressive
-  interpolation never wins outright, which is the correct outcome given the table
-  above.</p>
-  <p>A second pass then re-scans either side of every repair for damage the span missed.
-  Some dropouts decay slightly too gently to trip an edge detector, so they are found by
-  level instead — against a threshold set from clean audio in the same track, since this
-  music has deep short dips of its own. That added <b>22</b> spans. A third pass rescans the whole track for near-silent floors regardless
-  of how loud the surrounding music is, which found <b>70</b> dropouts the first detector
-  had been built to skip. Total: <b>330</b> spans.</p>
-  <p>Every fill is then matched to the local high-frequency ceiling, crossfaded
-  <b>10&nbsp;ms</b> into the measured audio at both ends rather than hard-spliced, and
-  capped so it can never exceed the original's peak.</p>
-  <div class="callout">
-    <p><b>Repairs are wider than the silences.</b> These dropouts don't stop and restart —
-    the stream cuts out in under 2&nbsp;ms, then fades back in over 30–60&nbsp;ms. That
-    ramp is damaged audio too: real music at the wrong, rising level. Repairing only the
-    silent core leaves it behind and the result swells into place. Spans cover the cliff,
-    the floor and the whole ramp.</p>
-  </div>
-</section>
-
-<section class="col">
-  <div class="sechead">
-    <div class="eyebrow">Checked, not assumed</div>
-    <h2>Verification</h2>
-  </div>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Check</th><th>Before</th><th>After</th></tr></thead>
-      <tbody>
-        <tr><th>Dropouts detected</th><td class="no">311</td><td class="ok">0</td></tr>
-        <tr><th>Audio lost</th><td class="no">8.52 s</td><td class="ok">0.00 s</td></tr>
-        <tr><th>Fill level vs surrounding music</th><td class="no">&minus;5.7 dB</td><td class="ok">&plusmn;0.0 dB</td></tr>
-        <tr><th>Fills &gt;10 dB below surroundings</th><td class="no">41</td><td class="ok">1</td></tr>
-        <tr><th>Seams with broadband splice burst</th><td>&mdash;</td><td class="ok">1%</td></tr>
-        <tr><th>Digital-silence runs introduced</th><td>&mdash;</td><td class="ok">0</td></tr>
-        <tr><th>Residual dips below control p99</th><td class="no">21</td><td class="ok">0</td></tr>
-        <tr><th>Dropout-shaped dips remaining</th><td class="no">311</td><td class="ok">1 (music)</td></tr>
-        <tr><th>Samples changed outside repairs</th><td>&mdash;</td><td class="ok">0</td></tr>
-        <tr><th>Peak level</th><td>&minus;0.32 dBFS</td><td class="ok">&minus;0.32 dBFS</td></tr>
-        <tr><th>Seam step vs neighbours</th><td>&mdash;</td><td class="ok">0.21 (control 0.22)</td></tr>
-        <tr><th>L/R correlation</th><td>0.9525</td><td class="ok">0.9525</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>Two of these checks exist because an earlier version of this repair passed the others
-  and was still wrong. <b>Fill level</b> catches a fill that decays quietly to nothing — a
-  hole with no sharp edge for a dropout detector to find. <b>Broadband splice burst</b>
-  measures energy from 19–23&nbsp;kHz, where this material has no content at all, so any
-  hard splice shows up there unmistakably even when the music masks it lower down. Both
-  failures were visible in the spectrogram before any metric caught them; the
-  <a href="REPORT.md">report</a> documents what went wrong.</p>
 </section>
 
 <section>
-  <div class="sechead col">
-    <div class="eyebrow">Files</div>
-    <h2>Downloads</h2>
+  <div class="sechead">
+    <h2>Every repaired span</h2>
+    <span class="note">click a time to hear it in the full-track player</span>
   </div>
+
+  <div class="panel">
+    <div class="filters" role="group" aria-label="Filter repairs">
+      <button type="button" data-f="all" aria-pressed="true">All</button>
+      <button type="button" data-f="long">50&nbsp;ms and longer</button>
+      <button type="button" data-f="quiet">Quietest fills</button>
+      <button type="button" data-f="clip">Has close-up</button>
+      <span class="count" id="tcount"></span>
+    </div>
+    <div class="tscroll">
+      <table>
+        <caption class="eyebrow" style="text-align:left;padding:.7rem 1.1rem 0">All repaired spans, sortable</caption>
+        <thead><tr>
+          <th data-k="seconds" aria-sort="ascending">Time</th>
+          <th data-k="span_ms">Span</th>
+          <th data-k="method">Fill</th>
+          <th data-k="found_by">Found</th>
+          <th data-k="fill_level_db">Level vs music</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <b>Fill</b> &mdash; <i>match</i>: a passage copied from elsewhere in the set;
+      <i>repeat</i>: a pitch-synchronous repeat of the neighbouring cycles.
+      <b>Found</b> &mdash; which pass caught it: the edge detector, the later floor sweep
+      (<i>missed</i>), or the rescan around a finished repair (<i>residual</i>).
+      <b>Level vs music</b> &mdash; the filled audio against its surroundings; 0&nbsp;dB is
+      a seamless match, and anything below &minus;6&nbsp;dB is marked so you can go
+      straight to it.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><h2>Files</h2></div>
   <div class="dl">
     <a href="audio/1784253717886_repaired.mp3" download>
       <span class="t">Repaired track</span>
@@ -371,35 +328,20 @@ code{font-family:var(--mono); font-size:.86em;}
     <a href="audio/1784253717886.mp3" download>
       <span class="t">Original (unmodified)</span>
       <span class="s">MP3 192 kbps &middot; 94.7 MB &middot; 65:45</span></a>
-    <a href="REPORT.md">
-      <span class="t">Full technical report</span>
-      <span class="s">Findings, method, verification, caveats</span></a>
     <a href="data/repair_manifest.csv" download>
       <span class="t">Repair manifest</span>
-      <span class="s">CSV &middot; 330 repairs with method, how found, match and score</span></a>
-  </div>
-  <p class="col" style="font-size:.9rem;color:var(--ink-soft)">The repaired master was
-  produced losslessly; this MP3 is a 192&nbsp;kbps encode of it, matching the original's
-  format so the two are directly comparable. Ask if you need the lossless file — it is too
-  large for this repository.</p>
-</section>
-
-<section class="col">
-  <div class="callout">
-    <p><b>Honest caveats.</b> The 230 matched fills are real audio lifted from elsewhere in
-    the set. They are musically plausible and spectrally continuous, but they are not what
-    was played in those moments. For a commercial release, spot-check the longest by ear —
-    26:45.399, 44:11.734, 41:53.245 and 12:02.938 — and remember that a re-capture from the
-    performer's own local recording would still beat all of this.</p>
-    <p>One span resists a good fill: <b>26:45.658</b>, 20&nbsp;ms, sits 12.7&nbsp;dB below
-    its neighbours because no comparable passage exists nearby. It is the single worst fill
-    in the track and the only one more than 10&nbsp;dB down.</p>
+      <span class="s">CSV &middot; all 330 spans</span></a>
+    <a href="REPORT.md">
+      <span class="t">Technical report</span>
+      <span class="s">Findings, method, verification, caveats</span></a>
   </div>
 </section>
 
-<footer class="col">
-  Analysis and repair performed on the 48&nbsp;kHz stereo decode of the original capture.
-  Method and verification are described in the <a href="REPORT.md">technical report</a>.
+<footer>
+  The repaired master was produced losslessly; this MP3 is a 192&nbsp;kbps encode of it,
+  matching the original's format so the two are directly comparable. Ask if you need the
+  lossless file. The 314 matched fills are real audio from elsewhere in the set &mdash;
+  musically plausible and spectrally continuous, but not what was played in those moments.
 </footer>
 
 </div>
@@ -415,6 +357,7 @@ for(let i=0;i<256;i++){
 }
 const fmt=s=>{s=Math.max(0,Math.round(s));return (s/60|0)+':'+String(s%60).padStart(2,'0');};
 const el=id=>document.getElementById(id);
+const cssvar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 /* ---------- radix-2 FFT ---------- */
 const NFFT=1024, HALF=NFFT>>1;
@@ -442,12 +385,12 @@ function fftMag(src,off,out){
 }
 
 /* ---------- state ---------- */
-let REP=null, CLIPS=null, A={}, playing=false, ver='after', raf=0;
+let REP=null, CLIPS=null, ROWS=[], A={}, playing=false, ver='after', raf=0;
 let actx=null;                       // only for decodeAudioData
 const SPAN=24, VIEW=16;              // seconds rendered / seconds visible
 let win={t0:0,t1:0,pps:60,ready:false,busy:false,seq:0};
 const off={before:document.createElement('canvas'),after:document.createElement('canvas')};
-let scrubT=null, hoverX=null, seekPend=0;
+let scrubT=null, hoverX=null;
 
 /* ---------- window rendering from decoded audio ---------- */
 async function fetchPCM(which,t0,t1){
@@ -469,7 +412,6 @@ function renderSpec(which,d,t0,t1,pps){
   const g=c.getContext('2d');
   const img=g.createImageData(W,H), px=img.data;
   const mag=new Float32Array(HALF);
-  const hop=d.sr/pps;
   for(let x=0;x<W;x++){
     const tt=t0+x/pps;
     const s=Math.round((tt-d.start)*d.sr)-(NFFT>>1);
@@ -481,7 +423,7 @@ function renderSpec(which,d,t0,t1,pps){
     for(let y=0;y<H;y++){
       const lo=Math.floor((H-1-y)/H*HALF), hi=Math.max(lo+1,Math.floor((H-y)/H*HALF));
       let mx=0; for(let i=lo;i<hi;i++) if(mag[i]>mx) mx=mag[i];
-      const db=20*Math.log10(mx/ (NFFT*0.25) +1e-9);
+      const db=20*Math.log10(mx/(NFFT*0.25)+1e-9);
       let v=(db+88)/(88-20);                    // -88..-20 dBFS -> 0..1
       v=v<0?0:v>1?1:v;
       const o=(v*255|0)*3, p=((y*W)+x)*4;
@@ -510,9 +452,7 @@ async function loadWindow(centre){
   }
   paint();
 }
-function needWindow(t){
-  return !win.ready || t<win.t0+3 || t>win.t1-3;
-}
+function needWindow(t){ return !win.ready || t<win.t0+3 || t>win.t1-3; }
 
 /* ---------- painting ---------- */
 function sizeCanvases(){
@@ -560,7 +500,6 @@ function drawOverlay(t){
         g.fillText(r.ms+' ms',x0+w/2,12);
       }
     }
-    // relative time ruler
     g.font='500 9px ui-monospace,monospace'; g.textAlign='center';
     for(let s=-8;s<=8;s+=2){
       if(s===0) continue;
@@ -572,7 +511,6 @@ function drawOverlay(t){
       g.fillText((s>0?'+':'')+s+'s',x,H-13);
     }
   }
-  // NOW marker, centred
   g.strokeStyle='#fff'; g.lineWidth=1.5; g.globalAlpha=.95;
   g.beginPath(); g.moveTo(mid+.5,0); g.lineTo(mid+.5,H); g.stroke(); g.globalAlpha=1;
   const lab='NOW '+fmt(t);
@@ -588,7 +526,7 @@ function drawTimeline(){
   const c=el('tl'); const W=Math.max(320,c.clientWidth|0), H=64;
   if(c.width!==W){c.width=W;} c.height=H;
   const g=c.getContext('2d');
-  const cs=getComputedStyle(document.documentElement), col=n=>cs.getPropertyValue(n).trim();
+  const col=cssvar;
   g.clearRect(0,0,W,H); g.fillStyle=col('--panel-2'); g.fillRect(0,0,W,H);
   const dur=REP?REP.dur:3945.552;
   if(REP){
@@ -617,11 +555,11 @@ function drawTimeline(){
   c.setAttribute('aria-valuetext',fmt(t));
 }
 
-/* ---------- transport ---------- */
+/* ---------- main transport ---------- */
 const curT=()=>A[ver]&&A[ver].el?A[ver].el.currentTime:0;
 function applyVer(){
-  for(const k of ['before','after']) if(A[k]) A[k].el.volume = (k===ver?1:0);
-  document.querySelectorAll('.toggle button').forEach(b=>
+  for(const k of ['before','after']) if(A[k]) A[k].el.volume=(k===ver?1:0);
+  document.querySelectorAll('.player .toggle button').forEach(b=>
     b.setAttribute('aria-pressed', b.dataset.v===ver));
   el('hint').textContent = ver==='before'
     ? 'hearing the original, with the dropouts' : 'hearing the repaired track';
@@ -642,6 +580,7 @@ async function toggle(){
     playing=false; el('play').innerHTML='&#9654;&nbsp; Play';
     cancelAnimationFrame(raf);
   }else{
+    exPause();
     const t=curT();
     for(const k of ['before','after']) A[k].el.currentTime=t;
     try{ await Promise.all([A.before.el.play(),A.after.el.play()]); }catch(e){}
@@ -716,63 +655,242 @@ function wireScrub(){
   });
 }
 
-/* ---------- gallery ---------- */
-function gallery(i){
-  const c=CLIPS[i];
-  [...el('galpick').children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.i===i));
+/* ---------- close-up excerpts ---------- */
+let EX={}, exVer='after', exPlaying=false, exRaf=0, curClip=0;
+const exDur=()=>{const c=CLIPS[curClip]; return c.pre+c.post;};
+const exT=()=>EX[exVer]&&EX[exVer].el?EX[exVer].el.currentTime:0;
+
+function exApplyVer(){
+  for(const k of ['before','after']) if(EX[k]) EX[k].el.volume=(k===exVer?1:0);
+  document.querySelectorAll('#closeup .toggle button').forEach(b=>
+    b.setAttribute('aria-pressed', b.dataset.v===exVer));
+  el('exhint').textContent = exVer==='before'
+    ? 'hearing the original excerpt, with the dropout' : 'hearing the repaired excerpt';
+}
+function exPause(){
+  if(!exPlaying) return;
+  for(const k of ['before','after']) EX[k].el.pause();
+  exPlaying=false; el('explay').innerHTML='&#9654;&nbsp; Play';
+  cancelAnimationFrame(exRaf); drawEnv();
+}
+async function exToggle(){
+  if(exPlaying){ exPause(); return; }
+  if(playing) toggle();
+  const t=exT()>=exDur()-0.05?0:exT();
+  for(const k of ['before','after']) EX[k].el.currentTime=t;
+  try{ await Promise.all([EX.before.el.play(),EX.after.el.play()]); }catch(e){}
+  exPlaying=true; el('explay').innerHTML='&#10073;&#10073;&nbsp; Pause';
+  exTick();
+}
+function exTick(){
+  const a=EX.after.el,b=EX.before.el;
+  if(exPlaying&&Math.abs(a.currentTime-b.currentTime)>0.04) b.currentTime=a.currentTime;
+  drawEnv();
+  if(exPlaying) exRaf=requestAnimationFrame(exTick);
+}
+function exSeek(t){
+  t=Math.max(0,Math.min(exDur()-0.02,t));
+  for(const k of ['before','after']) EX[k].el.currentTime=t;
+  drawEnv();
+}
+function drawEnv(){
+  const c=el('env'); if(!CLIPS) return;
+  const W=Math.max(320,c.clientWidth|0), H=84;
+  if(c.width!==W){c.width=W;} c.height=H;
+  const g=c.getContext('2d'), cl=CLIPS[curClip], total=cl.pre+cl.post;
+  g.clearRect(0,0,W,H); g.fillStyle=cssvar('--scope'); g.fillRect(0,0,W,H);
+
+  const x0=cl.pre/total*W, x1=(cl.pre+cl.ms/1000)/total*W;
+  g.fillStyle='rgba(224,165,95,.20)'; g.fillRect(x0,0,Math.max(2,x1-x0),H);
+  g.strokeStyle='rgba(224,165,95,.85)'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(x0+.5,0); g.lineTo(x0+.5,H); g.stroke();
+
+  for(const [nm,mid,varn] of [['before',H*0.26,'--missing'],['after',H*0.74,'--measured']]){
+    const mn=cl.env[nm][0], mx=cl.env[nm][1], N=mn.length, amp=H*0.21;
+    g.strokeStyle=cssvar(varn); g.lineWidth=1; g.globalAlpha=.95; g.beginPath();
+    for(let i=0;i<N;i++){
+      const x=i/(N-1)*W;
+      g.moveTo(x+.5,mid-mx[i]*amp); g.lineTo(x+.5,mid-mn[i]*amp);
+    }
+    g.stroke(); g.globalAlpha=1;
+    const lab=nm.toUpperCase();
+    g.font='500 9px ui-monospace,monospace'; g.textAlign='left';
+    const lw=g.measureText(lab).width;
+    g.fillStyle='rgba(7,11,16,.72)'; g.fillRect(4,mid-7,lw+8,13);
+    g.fillStyle=cssvar(varn); g.fillText(lab,8,mid+3);
+  }
+  g.strokeStyle='rgba(255,255,255,.28)'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(0,H/2+.5); g.lineTo(W,H/2+.5); g.stroke();
+
+  const t=exT(), px=t/total*W;
+  g.strokeStyle='#fff'; g.lineWidth=1.5;
+  g.beginPath(); g.moveTo(px+.5,0); g.lineTo(px+.5,H); g.stroke();
+  el('extcode').textContent=t.toFixed(1)+' / '+total.toFixed(1)+' s';
+  c.setAttribute('aria-valuenow',t.toFixed(1));
+  c.setAttribute('aria-valuetext',t.toFixed(1)+' s');
+}
+function showClip(i){
+  const c=CLIPS[i]; if(!c) return;
+  curClip=i; exPause();
+  [...el('pick').children].forEach(b=>b.setAttribute('aria-pressed',+b.dataset.i===i));
   el('imgB').src='img/'+c.key+'_before.png';
   el('imgA').src='img/'+c.key+'_after.png';
   el('imgB').alt='Spectrogram before repair at '+c.label;
   el('imgA').alt='Spectrogram after repair at '+c.label;
-  el('galcap').innerHTML=`<b>${c.label}</b> &mdash; ${c.ms} ms span, filled by `+
-    (c.method==='exemplar'?'copying the best-matching passage elsewhere in the set':
-     'a pitch-synchronous repeat of its neighbours')+`. ${c.note}. `+
-    `Each image spans 3 s before to 5 s after the dropout.`;
+  for(const k of ['before','after']){
+    EX[k].el.src='clips/'+c.key+'_'+k+'.mp3';
+    EX[k].el.load(); EX[k].el.currentTime=0;
+  }
+  el('env').setAttribute('aria-valuemax',(c.pre+c.post).toFixed(1));
+  el('excap').innerHTML=`<b>${c.label}</b> &mdash; ${c.ms} ms, filled by `+
+    (c.method==='exemplar'?'a matching passage from elsewhere in the set'
+                          :'a pitch-synchronous repeat of its neighbours')+
+    `. Excerpt and both images run from ${c.pre}&nbsp;s before the dropout to `+
+    `${c.post}&nbsp;s after; the dashed line and the amber band mark it.`;
+  exApplyVer(); drawEnv();
+}
+function wireEnv(){
+  const c=el('env');
+  const at=x=>{const r=c.getBoundingClientRect(); return (x-r.left)/r.width*exDur();};
+  let dragging=false;
+  c.addEventListener('pointerdown',e=>{dragging=true;c.setPointerCapture(e.pointerId);exSeek(at(e.clientX));});
+  c.addEventListener('pointermove',e=>{if(dragging)exSeek(at(e.clientX));});
+  c.addEventListener('pointerup',()=>{dragging=false;});
+  c.addEventListener('pointercancel',()=>{dragging=false;});
+  c.addEventListener('keydown',e=>{
+    if(e.key==='ArrowLeft'){e.preventDefault();exSeek(exT()-0.5);}
+    else if(e.key==='ArrowRight'){e.preventDefault();exSeek(exT()+0.5);}
+    else if(e.key==='Home'){e.preventDefault();exSeek(0);}
+    else if(e.key===' '){e.preventDefault();exToggle();}
+  });
+}
+
+/* ---------- repair table ---------- */
+let sortKey='seconds', sortDir=1, filter='all';
+const QUIET=-6;
+const clipAt=sec=>CLIPS.findIndex(c=>Math.abs(c.t-sec)<0.02);
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);
+  const head=lines[0].split(',');
+  return lines.slice(1).map(l=>{
+    const v=l.split(','), o={};
+    head.forEach((h,i)=>{o[h]=v[i];});
+    o.seconds=+o.seconds; o.span_ms=+o.span_ms; o.fill_level_db=+o.fill_level_db;
+    o.clip=clipAt(o.seconds);
+    return o;
+  });
+}
+const passes=r=> filter==='all' ? true
+  : filter==='long' ? r.span_ms>=50
+  : filter==='quiet' ? r.fill_level_db<=QUIET
+  : r.clip>=0;
+function renderTable(){
+  const rows=ROWS.filter(passes).sort((a,b)=>{
+    const x=a[sortKey], y=b[sortKey];
+    return (typeof x==='number' ? x-y : String(x).localeCompare(String(y)))*sortDir;
+  });
+  const tb=el('tbody');
+  tb.innerHTML=rows.map(r=>{
+    const q=r.fill_level_db<=QUIET?' quiet':'';
+    const lvl=(r.fill_level_db>0?'+':'')+r.fill_level_db.toFixed(1);
+    return `<tr data-t="${r.seconds}" data-c="${r.clip}">`+
+      `<td><button type="button" class="tm">${r.timecode}</button></td>`+
+      `<td>${r.span_ms.toFixed(0)} ms</td>`+
+      `<td>${r.method==='exemplar'?'match':'repeat'}</td>`+
+      `<td>${r.found_by}</td>`+
+      `<td class="${q.trim()}">${lvl} dB</td>`+
+      `<td>${r.clip>=0?'<button type="button" class="cu">close-up</button>':''}</td>`+
+      `</tr>`;
+  }).join('');
+  el('tcount').textContent=rows.length===ROWS.length
+    ? ROWS.length+' spans' : rows.length+' of '+ROWS.length+' spans';
+  document.querySelectorAll('thead th[data-k]').forEach(th=>{
+    if(th.dataset.k===sortKey) th.setAttribute('aria-sort',sortDir>0?'ascending':'descending');
+    else th.removeAttribute('aria-sort');
+  });
+}
+function gotoTime(sec,tr){
+  document.querySelectorAll('#tbody tr.on').forEach(x=>x.classList.remove('on'));
+  if(tr) tr.classList.add('on');
+  seek(Math.max(0,sec-4));
+  const p=document.querySelector('.player');
+  p.scrollIntoView({behavior:'smooth',block:'center'});
+  p.classList.add('flash'); setTimeout(()=>p.classList.remove('flash'),900);
+}
+function wireTable(){
+  el('tbody').addEventListener('click',e=>{
+    const tr=e.target.closest('tr'); if(!tr) return;
+    if(e.target.classList.contains('cu')){
+      const i=+tr.dataset.c;
+      if(i>=0){ showClip(i); el('closeup').scrollIntoView({behavior:'smooth',block:'center'}); }
+      return;
+    }
+    gotoTime(+tr.dataset.t,tr);
+  });
+  document.querySelectorAll('thead th[data-k]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const k=th.dataset.k;
+      if(k===sortKey) sortDir=-sortDir; else {sortKey=k; sortDir=1;}
+      renderTable();
+    });
+  });
+  document.querySelectorAll('.filters button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      filter=b.dataset.f;
+      document.querySelectorAll('.filters button').forEach(x=>
+        x.setAttribute('aria-pressed',x===b));
+      renderTable();
+    });
+  });
 }
 
 /* ---------- boot ---------- */
 Promise.all([
   fetch('data/repairs.json').then(r=>r.json()),
-  fetch('data/clips.json').then(r=>r.json())
-]).then(([rep,clips])=>{
-  REP=rep; CLIPS=clips;
+  fetch('data/clips.json').then(r=>r.json()),
+  fetch('data/repair_manifest.csv').then(r=>r.text())
+]).then(([rep,clips,csv])=>{
+  REP=rep; CLIPS=clips; ROWS=parseCSV(csv);
   actx=new (window.AudioContext||window.webkitAudioContext)();
+
   for(const k of ['before','after']){
     const a=new Audio(rep.audio[k].file);
     a.preload='metadata';
     A[k]={el:a};
+    const x=new Audio(); x.preload='auto'; EX[k]={el:x};
   }
   A.after.el.addEventListener('ended',()=>{playing=false;el('play').innerHTML='&#9654;&nbsp; Play';});
+  EX.after.el.addEventListener('ended',()=>exPause());
+
   el('play').addEventListener('click',toggle);
-  document.querySelectorAll('.toggle button').forEach(b=>
+  document.querySelectorAll('.player .toggle button').forEach(b=>
     b.addEventListener('click',()=>{ver=b.dataset.v;applyVer();paint();}));
   el('bk').addEventListener('click',()=>seek(curT()-10));
   el('fw').addEventListener('click',()=>seek(curT()+10));
   wireScrub();
-  const j=el('jump');
-  (rep.jumps||[]).forEach(x=>{
-    const b=document.createElement('button');
-    b.type='button';
-    b.innerHTML=fmt(x.t)+'<i>'+x.ms+'</i>';
-    b.title=x.ms+' ms repair at '+fmt(x.t);
-    b.addEventListener('click',()=>seek(Math.max(0,x.t-4)));
-    j.appendChild(b);
-  });
-  const gp=el('galpick');
+
+  el('explay').addEventListener('click',exToggle);
+  document.querySelectorAll('#closeup .toggle button').forEach(b=>
+    b.addEventListener('click',()=>{exVer=b.dataset.v;exApplyVer();}));
+  wireEnv();
+
+  const pk=el('pick');
   clips.forEach((c,i)=>{
     const b=document.createElement('button');
     b.type='button'; b.textContent=c.label; b.dataset.i=i;
-    b.addEventListener('click',()=>gallery(i));
-    gp.appendChild(b);
+    b.title=c.ms+' ms repair at '+c.label;
+    b.addEventListener('click',()=>showClip(i));
+    pk.appendChild(b);
   });
+
+  wireTable(); renderTable();
   el('tl').setAttribute('aria-valuemax',String(Math.round(rep.dur)));
-  applyVer(); sizeCanvases(); gallery(0);
+  applyVer(); sizeCanvases(); showClip(0);
   loadWindow(0); refreshUI(0);
 });
 addEventListener('resize',()=>{clearTimeout(window._r);window._r=setTimeout(()=>{
-  sizeCanvases(); loadWindow(curT()); },160);});
-matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>paint());
-
+  sizeCanvases(); loadWindow(curT()); drawEnv(); },160);});
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{paint();drawEnv();});
 </script>
 </body>
 </html>
