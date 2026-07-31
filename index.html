@@ -39,7 +39,18 @@ p{margin:0;}
 a{color:var(--measured);}
 .eyebrow{font-family:var(--mono); font-size:.68rem; letter-spacing:.17em;
   text-transform:uppercase; color:var(--ink-faint);}
-header.mast{padding:3.4rem 0 0; display:grid; gap:.55rem;}
+header.mast{padding:3.4rem 0 0; display:flex; align-items:flex-end;
+  justify-content:space-between; gap:1.5rem; flex-wrap:wrap;}
+.masthead{display:grid; gap:.55rem;}
+a.dlbtn{font-family:var(--mono); font-size:.82rem; font-weight:600; text-decoration:none;
+  background:var(--measured); color:#fff; border:1px solid var(--measured);
+  border-radius:2px; padding:.62rem 1.15rem; flex:none; white-space:nowrap;}
+a.dlbtn::before{content:"\2193\00a0";}
+a.dlbtn:hover{filter:brightness(1.08);}
+a.dlbtn:active{filter:brightness(.94);}
+/* --measured is a dark teal on paper but a light one on ink; white text holds
+   5.8:1 on the first and only 2.4:1 on the second, so the label flips. */
+@media (prefers-color-scheme:dark){ a.dlbtn{color:var(--paper);} }
 hr.rule{border:0; border-top:1px solid var(--rule); margin:1.9rem 0 0;}
 section{display:grid; gap:.9rem; margin-top:2.4rem;}
 .sechead{display:flex; align-items:baseline; gap:.8rem; flex-wrap:wrap;}
@@ -84,17 +95,6 @@ canvas{display:block; width:100%; height:auto;}
 .skips button:hover{color:var(--ink); border-color:var(--ink-faint);}
 button:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
 a:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
-.grab{display:flex; align-items:center; gap:.3rem;}
-.grab .lbl{font-family:var(--mono); font-size:.68rem; color:var(--ink-faint);}
-.grab a{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
-  background:var(--panel-2); border:1px solid var(--rule); border-radius:1px;
-  padding:.5rem .6rem; text-decoration:none; display:inline-flex; gap:.35rem;
-  align-items:center;}
-.grab a:hover{color:var(--ink); border-color:var(--ink-faint);}
-.grab a::before{content:"\2193"; color:var(--ink-faint);}
-.grab a:hover::before{color:var(--ink);}
-.grab a[data-v=before]{border-left:2px solid var(--missing);}
-.grab a[data-v=after]{border-left:2px solid var(--measured);}
 .legend{font-family:var(--mono); font-size:.68rem; line-height:1.6; color:var(--ink-faint);
   padding:.6rem 1.1rem; border-top:1px solid var(--rule-soft); background:var(--panel-2);}
 .legend b{color:var(--ink-soft); font-weight:500;}
@@ -191,8 +191,13 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
 <div class="wrap">
 
 <header class="mast">
-  <div class="eyebrow">Track review &middot; 64:45 &middot; 48 kHz stereo</div>
-  <h1>Before and after, every repair</h1>
+  <div class="masthead">
+    <div class="eyebrow">Track review &middot; 64:45 &middot; 48 kHz stereo</div>
+    <h1>Before and after, every repair</h1>
+  </div>
+  <a class="dlbtn" href="audio/1784253717886_repaired.mp3"
+     download="1784253717886_repaired.mp3"
+     title="Repaired track &mdash; MP3 192 kbps, 93.3 MB, 64:45">Download</a>
 </header>
 
 <hr class="rule">
@@ -223,15 +228,6 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
         <div class="skips">
           <button type="button" id="bk" title="Back 10 seconds">&minus;10s</button>
           <button type="button" id="fw" title="Forward 10 seconds">+10s</button>
-        </div>
-        <div class="grab">
-          <span class="lbl">save</span>
-          <a data-v="before" href="audio/1784253717886.mp3"
-             download="1784253717886_original.mp3"
-             title="Original capture, unmodified — MP3 192 kbps, 93.3 MB">before</a>
-          <a data-v="after" href="audio/1784253717886_repaired.mp3"
-             download="1784253717886_repaired.mp3"
-             title="Repaired track — MP3 192 kbps, 93.3 MB">after</a>
         </div>
         <span class="hint" id="hint">hearing the repaired track</span>
         <span class="hint" id="next"></span><span class="hint" id="specnote"></span>
@@ -280,13 +276,6 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
         <div class="toggle" role="group" aria-label="Which version you hear">
           <button type="button" id="exb" data-v="before">Before</button>
           <button type="button" id="exa" data-v="after">After</button>
-        </div>
-        <div class="grab">
-          <span class="lbl">save excerpt</span>
-          <a data-v="before" id="exdlb" href="" download
-             title="This excerpt before repair — MP3 128 kbps">before</a>
-          <a data-v="after" id="exdla" href="" download
-             title="This excerpt after repair — MP3 128 kbps">after</a>
         </div>
         <span class="hint" id="exhint">hearing the repaired excerpt</span>
         <span class="tcode" id="extcode">0.0 / 8.0 s</span>
@@ -768,14 +757,6 @@ function showClip(i){
   for(const k of ['before','after']){
     EX[k].el.src='clips/'+c.key+'_'+k+'.mp3';
     EX[k].el.load(); EX[k].el.currentTime=0;
-  }
-  // downloads follow whichever repair is on screen
-  for(const [id,k] of [['exdlb','before'],['exdla','after']]){
-    const a=el(id);
-    a.href='clips/'+c.key+'_'+k+'.mp3';
-    a.setAttribute('download',c.key+'_'+k+'.mp3');
-    a.title=`${c.label}, ${c.pre}s before to ${c.post}s after the dropout — `+
-            `${k==='before'?'as captured':'repaired'}, MP3 128 kbps`;
   }
   el('env').setAttribute('aria-valuemax',(c.pre+c.post).toFixed(1));
   el('excap').innerHTML=`<b>${c.label}</b> &mdash; ${c.ms} ms, filled by `+
