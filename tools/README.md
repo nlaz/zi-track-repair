@@ -18,6 +18,7 @@ python3 tools/verify.py decoded.wav repaired.wav spans.json
 | file | what it does |
 |---|---|
 | `audiokit.py` | shared: memmapped WAV I/O, envelopes, critical-band energy, onset counting, the two seam measures |
+| `beatgrid.py` | local tempo, with a confidence — constrains where a fill may be borrowed from |
 | `detect.py` | two detectors + span shaping → `spans.json` |
 | `repair.py` | candidate generation and scoring → repaired WAV + manifest |
 | `verify.py` | seven checks, each against a control drawn from the same file |
@@ -64,6 +65,18 @@ On lowpassed material it lands in an empty band above the content ceiling, where
 it is unmistakable — 98% of seams in one version, invisible to a check that only
 looked above 8 kHz.
 
+**Borrow on the beat.** The exemplar search ranks candidates by cross-correlating the
+240 ms either side of the gap. In dense percussion that objective is nearly flat — almost
+any busy window correlates with any other — so the winner is separated by very little, and
+the choice falls to timbre while position in the bar goes unscored. Left free it picked
+lags a median 121 ms off the beat in the worst passage, further off than random. Lags are
+now restricted to whole multiples of the local beat and refined ±25 ms.
+
+Note this is not a disagreement the two methods have everywhere: on gaps cut from clean
+audio the free search already lands ~25 ms from the grid by itself. It is specifically on
+real dropouts that it wanders (58 ms vs 25 ms, p = 1.2e-4), which is also why a
+ground-truth test built on synthetic damage cannot measure the difference.
+
 **Every threshold needs a control.** "Median seam ratio 0.20" is meaningless
 alone. Measured against random points in untouched audio from the same file
 (0.22), it means the repairs are smoother than the material's own transitions.
@@ -81,10 +94,19 @@ milliseconds inside the fill and reads as a false click. The same applies to
 `--guard-ms`, which must cover the pre-guard plus the crossfade or check 1
 reports changes outside the repair regions that are not real.
 
-**The ultrasonic check compares medians, not an exceedance count.** With a few
-hundred control samples the 99th percentile is the second-highest value and far
-too noisy to gate on. The failure it guards against measured 258× the control
-median, so a 3× ratio separates it with room to spare.
+**Spans must be merged wider than the crossfade.** `repair.py` fades 10 ms into the audio
+either side of a span, so two spans less than 20 ms apart are repaired into each other —
+the second fill overwrites part of the first one's tail fade and leaves a discontinuity
+neither fill contains alone (20206 counts where the original moves 322). `detect.py`
+merges at 20 ms for that reason. If you change `XFADE`, change the merge gap with it.
+
+**The ultrasonic check needs two thresholds, because seams fail two ways.** It compares
+medians, not an exceedance count: with a few hundred control samples the 99th percentile is
+the second-highest value, far too noisy to gate on, and the systemic failure it guards
+against — every seam spliced rather than crossfaded — measured 258× the control median, so
+a 3× ratio separates that with room to spare. But a median cannot see a handful of
+outliers. Four seams at up to 4282× the local norm once sat in a shipped file while the
+median read 1.58 with and without them. Hence the second threshold, a per-seam ceiling.
 
 **AR interpolation is only offered below 40 ms.** It decays toward the mean, so
 on long gaps it produces a quiet hole with no sharp edge — invisible to a dropout

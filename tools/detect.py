@@ -108,7 +108,16 @@ def span_for(db, sm, nb, i0):
     return s, f0 + j + 5
 
 
-def merge(spans, gap_ms=15):
+def merge(spans, gap_ms=20):
+    """Join spans closer than the crossfade repair.py will apply to each.
+
+    repair.py fades 10 ms into the audio either side of a span. Two spans 15 ms
+    apart are therefore repaired into each other: the second fill blends with,
+    and overwrites part of, the first one's tail fade. That produced a
+    20206-sample step at 35:59.941 where the original moves 322 -- a click
+    inside a fill that every whole-file check passed. The threshold must be at
+    least twice XFADE.
+    """
     spans = sorted(spans)
     out = []
     for a, b in spans:

@@ -7,7 +7,11 @@ Nothing here recovers lost audio; it invents audio convincing enough that the se
 disappears. For each span it builds candidates —
 
   * the six best-matching passages elsewhere in the track (sample-accurate
-    normalised cross-correlation of the 240 ms either side, ±10 s search),
+    normalised cross-correlation of the 240 ms either side), searched either
+    freely over ±10 s or — by default — only at whole multiples of the local
+    beat. See `top_lags`: left free, that search answers "which passage sounds
+    most like this one", which in dense percussion is decided by timbre and
+    leaves the position within the bar to chance,
   * a pitch-synchronous repeat of the span's own neighbours (Hann overlap-add at
     hop P; a naive `x[a-P + i%P]` puts a discontinuity at every period),
   * an autoregressive interpolation (Janssen, order 128) for short spans,
@@ -38,6 +42,7 @@ from scipy.sparse.linalg import spsolve
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 from audiokit import (SR, load, load_rw, mono, rms, fmt, band_energy,
                       band_error_db, onset_count)
+from beatgrid import local_beat, off_grid_ms
 
 CEIL_DEFAULT = 32767
 PAD = 12000
@@ -247,10 +252,15 @@ def apply_fill(dst, g0, g1, ext, F):
 
 # ---------------------------------------------------------------- the pass
 class Repairer:
-    def __init__(self, SRC, spans, ceil):
+    def __init__(self, SRC, spans, ceil, beat=0.0, grid_beats=40, refine_ms=25.0):
         self.SRC = SRC
         self.N = len(SRC)
         self.ceil = ceil
+        # beat > 0 restricts exemplar lags to whole multiples of it; set per
+        # span by main(), since a DJ set has no single tempo. 0 = free search.
+        self.beat = beat
+        self.grid_beats = grid_beats
+        self.refine = int(refine_ms / 1000 * SR)
         ms = self.N // 48 + 2
         self.dmask = np.zeros(ms, bool)
         for s in spans:
@@ -265,18 +275,61 @@ class Repairer:
         return (self.dcum[ib] - self.dcum[ia]) > 0
 
     def top_lags(self, g0, g1, K=6):
+        """The K best places to borrow from, best first.
+
+        Ranking is normalised cross-correlation of the 240 ms flanking the gap.
+        Left to range freely that objective has many near-ties in dense
+        percussion — a busy drum window correlates respectably with almost any
+        other — so it settles on timbre and lets the position within the bar
+        fall where it may. Measured over this track the lags it picked sat a
+        median 57 ms from a whole beat, and in the worst cluster 121 ms: a third
+        of a beat, so every borrowed fragment arrived between the hits instead
+        of on them, which is audible as invented rhythm.
+
+        With `beat` set, only whole multiples of it are considered, and the
+        winner is refined ±25 ms to recover sample alignment (and absorb tempo
+        drift). Note the two are not alternatives that usually disagree: on
+        synthetic gaps cut from clean audio the free search already lands ~25 ms
+        from the grid on its own. It is specifically on real dropouts that it
+        wanders, and that is the case the constraint is for.
+        """
         SRC = self.SRC
         C = int(0.240 * SR)
-        lo, hi = max(0, g0 - MAXLAG - C), min(self.N, g1 + MAXLAG + C)
+        maxlag = MAXLAG if self.beat <= 0 else \
+            int(self.grid_beats * self.beat * SR) + self.refine
+        lo, hi = max(0, g0 - maxlag - C), min(self.N, g1 + maxlag + C)
         reg = mono(SRC, lo, hi)
         pre, post = mono(SRC, g0 - C, g0), mono(SRC, g1, g1 + C)
         sp_, so = ncc(pre, reg), ncc(post, reg)
         if sp_ is None or so is None:
             return []
-        ds = np.r_[np.arange(MINLAG, MAXLAG), -np.arange(MINLAG, MAXLAG)]
-        ip, io = (g0 - ds - C) - lo, (g1 - ds) - lo
-        ok = (ip >= 0) & (io >= 0) & (ip < len(sp_)) & (io < len(so))
-        ds, sc = ds[ok], 0.5 * (sp_[ip[ok]] + so[io[ok]])
+
+        if self.beat > 0:
+            bs = self.beat * SR
+            cand = []
+            for m in range(1, self.grid_beats + 1):
+                for sgn in (1, -1):
+                    d0 = int(round(sgn * m * bs))
+                    if abs(d0) < MINLAG:
+                        continue
+                    ds_ = np.arange(d0 - self.refine, d0 + self.refine + 1)
+                    ip_, io_ = (g0 - ds_ - C) - lo, (g1 - ds_) - lo
+                    ok_ = (ip_ >= 0) & (io_ >= 0) & (ip_ < len(sp_)) & (io_ < len(so))
+                    if not ok_.any():
+                        continue
+                    v = 0.5 * (sp_[ip_[ok_]] + so[io_[ok_]])
+                    j = int(np.argmax(v))
+                    cand.append((int(ds_[ok_][j]), float(v[j])))
+            if not cand:
+                return []
+            ds = np.array([c[0] for c in cand])
+            sc = np.array([c[1] for c in cand])
+        else:
+            ds = np.r_[np.arange(MINLAG, MAXLAG), -np.arange(MINLAG, MAXLAG)]
+            ip, io = (g0 - ds - C) - lo, (g1 - ds) - lo
+            ok = (ip >= 0) & (io >= 0) & (ip < len(sp_)) & (io < len(so))
+            ds, sc = ds[ok], 0.5 * (sp_[ip[ok]] + so[io[ok]])
+
         out = []
         for i in np.argsort(-sc):
             d = int(ds[i])
@@ -362,6 +415,12 @@ def main():
     ap.add_argument('spans')
     ap.add_argument('-o', '--out', default='repaired.wav')
     ap.add_argument('-m', '--manifest', default='repair_manifest.csv')
+    ap.add_argument('--free-lag', action='store_true',
+                    help='search exemplar lags freely instead of on the local '
+                         'beat grid (reproduces the earlier, rhythm-blind pass)')
+    ap.add_argument('--tempo-conf', type=float, default=0.30,
+                    help='onset autocorrelation below which the local tempo is '
+                         'not trusted and the lag search is left free')
     args = ap.parse_args()
 
     shutil.copyfile(args.wav, args.out)
@@ -376,23 +435,33 @@ def main():
 
     R = Repairer(SRC, spans, ceil)
     rows = []
+    ngrid = 0
     for k, s in enumerate(spans):
         g0 = int(round(s['t0'] * SR)) - int(0.002 * SR)
         g1 = int(round(s['t1'] * SR)) + int(0.001 * SR)
         if g1 - g0 < 8 or g0 < PAD or g1 > len(SRC) - PAD:
             continue
+        beat, conf = (0.0, 0.0) if args.free_lag else local_beat(SRC, g0 / SR)
+        R.beat = beat if conf >= args.tempo_conf else 0.0
+        ngrid += R.beat > 0
         info = R.repair(D, g0, g1)
+        lag = info['lag_s']
         rows.append({'timecode': fmt(g0 / SR), 'seconds': round(g0 / SR, 3),
                      'span_ms': round((g1 - g0) / SR * 1000, 1),
-                     'method': info['method'], 'exemplar_lag_s': info['lag_s'],
+                     'method': info['method'], 'exemplar_lag_s': lag,
                      'match_ncc': info['ncc'], 'spectral_score': info['score'],
-                     'fill_level_db': info['level_db']})
+                     'fill_level_db': info['level_db'],
+                     'bpm': (round(60 / beat, 1) if beat else ''),
+                     'tempo_conf': round(conf, 3),
+                     'off_beat_ms': (round(off_grid_ms(float(lag), R.beat), 1)
+                                     if (lag != '' and R.beat) else '')})
         if (k + 1) % 50 == 0:
             print(f"  {k+1}/{len(spans)}", flush=True)
     D.flush()
 
     hdr = ['timecode', 'seconds', 'span_ms', 'method', 'exemplar_lag_s',
-           'match_ncc', 'spectral_score', 'fill_level_db']
+           'match_ncc', 'spectral_score', 'fill_level_db', 'bpm', 'tempo_conf',
+           'off_beat_ms']
     with open(args.manifest, 'w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=hdr); w.writeheader(); w.writerows(rows)
 
@@ -402,6 +471,10 @@ def main():
     print(f"  methods: {dict(Counter(r['method'] for r in rows))}")
     print(f"  fill level vs context: median {np.median(lv):+.1f} dB, "
           f"below -6 dB: {(lv < -6).sum()}")
+    ob = np.array([r['off_beat_ms'] for r in rows if r['off_beat_ms'] != ''])
+    print(f"  beat-gridded: {ngrid}/{len(rows)} spans"
+          + (f"; chosen lags sit a median {np.median(ob):.0f} ms off the beat"
+             if len(ob) else ""))
     print(f"  wrote {args.out} and {args.manifest}")
 
 

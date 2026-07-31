@@ -606,15 +606,164 @@ track, not the original capture.
 
 ---
 
-## 10. Caveats
+## 10. The 38:19 cluster: fills borrowed from the wrong point in the bar
 
-**The matched fills are not what was played.** 230 of 238 repairs contain real audio
-lifted from elsewhere in the set. They are musically plausible and spectrally continuous,
-but they are inventions. For a commercial release, spot-check the longest by ear:
-**26:45.399** (172 ms), **44:11.734** (159 ms), **41:53.245** (141 ms), **12:02.938**
-(150 ms).
+Reported by ear: *"starting at 38:19 there's a repeated back-to-back series of repairs…
+the spectrum looks like it creates new patterns that didn't match the pattern."*
 
-**One span has no good answer.** 26:45.658, a 20 ms gap, sits 12.7 dB below its
+That is an accurate description of the defect, and of its cause.
+
+### 10.1 Why this stretch and not another
+
+38:15.4–38:52.5 holds **17 dropouts in 42 seconds** — about five times the track's average
+density. 3.5% of that passage is invented audio, against 0.48% overall. Any weakness in
+the fills is concentrated there, which is why it is the passage a listener notices.
+
+The spans themselves are not the problem. Each one matches the measured damage extent to
+within a millisecond, no dropout in the window went undetected, and no residual tail
+survives past a span end (median 0 ms, against 0 ms for clean-audio controls, p = 0.21).
+
+### 10.2 The exemplar came from the wrong beat
+
+The passage runs at **145.14 BPM** — a 413.4 ms beat, stable to under a millisecond
+across every 20 s window from 37:40 to 39:30. Measuring each fill's exemplar lag against
+that grid:
+
+| | median distance from a whole beat |
+|---|---|
+| Lags in this cluster | **121 ms** |
+| A quarter-beat — what random lags would give | 103 ms |
+| Lags across the whole track | 57 ms |
+
+In the cluster the chosen lags were *worse than random*. Half a dozen sat within 20 ms of
+a half-beat, meaning the borrowed fragment arrived precisely between the hits rather than
+on them. That is what "creates new patterns" sounds like, and what it looks like on a
+spectrogram: an inserted double hit at 38:33.2–38:33.4, a new transient at 38:49.4 and
+again at 38:50.3, a dark hole where the pattern expects a hit at 38:37.3.
+
+The cause is the ranking function. `top_lags` scores candidates by normalised
+cross-correlation of the 240 ms flanking the gap. In dense percussion that measure has
+many near-ties — a busy drum window correlates respectably with almost any other — so it
+settles on timbre and leaves the position within the bar to chance.
+
+### 10.3 The failure is specific to real dropouts
+
+Constructing synthetic gaps and repairing them, the same free search behaves *well*:
+
+| gaps | n | median off-beat | within 25 ms |
+|---|---|---|---|
+| Synthetic, cut from clean audio | 120 | 25 ms | 50% |
+| Real dropouts | 270 | **58 ms** | 29% |
+
+Mann-Whitney p = 1.2 × 10⁻⁴. Something about a real dropout's flanks degrades the match
+in a way that deleting a window does not.
+
+### 10.4 Two ground-truth tests that could not settle it
+
+Because concealment has no ground truth, the natural check is to damage known-good audio
+and compare the fill against what was really there. That was run twice:
+
+1. **Windows cut from clean audio** (44 gaps, matched length distribution). Free search
+   vs beat-grid: log-spectral distance 1.39 vs 1.42 dB, onset correlation 0.824 vs 0.840,
+   p = 0.97 and 0.40.
+2. **The dropout shape simulated** — a 1.5 ms collapse to −70 dBFS, a hold, then a
+   30–60 ms raised-cosine recovery — with spans derived by the production detector
+   (48 events). LSD 2.06 vs 2.07 dB, p = 0.39.
+
+Neither result is evidence that beat alignment does not help, because in both the free
+search *already* chose near-grid lags — 35 ms and 9 ms respectively. The two policies were
+choosing the same exemplars, so the comparison had nothing to measure. **These tests are
+uninformative, not negative**, and the reason is the finding in §10.3: the synthetic
+damage never reproduced the condition under which the free search goes wrong.
+
+This is recorded rather than quietly dropped because the honest state of the evidence is:
+the defect is measured and visible, the fix removes it, and a controlled test of the fix
+in isolation could not be constructed.
+
+### 10.5 The fix
+
+Exemplar lags are restricted to whole multiples of the **local** beat, then refined ±25 ms
+to recover sample alignment and absorb tempo drift. A DJ set has no single tempo, so the
+beat is measured per span (`tools/beatgrid.py`) from the autocorrelation of the onset
+flux, summed over 1, 2, 4 and 8 beats so the estimate cannot settle on a half- or
+double-time reading. Where that estimate is not confident — breakdowns, ambient passages,
+the seconds around a transition — the search is left free.
+
+Applied to the 86 spans that were demonstrably off-grid or newly merged:
+
+| | before | after |
+|---|---|---|
+| Off-beat distance, re-filled spans | 154 ms | **11 ms** |
+| Off-beat distance, whole track | 57 ms | **23 ms** |
+| Exemplar lags within 25 ms of the beat | 29% | **55%** |
+| Onset-pattern agreement in the cluster | 0.14 | **0.26** |
+
+The last row is measured against the same passage one bar either side. 0.26 is exactly
+the median that *undamaged* audio in this passage scores — the fills now sit in the bar
+the way the surrounding music does. (An earlier draft of this compared against 0.51, the
+figure for the whole excerpt; that was the wrong target, drawn from a more repetitive
+later section.)
+
+### 10.6 A second, unrelated defect found on the way
+
+Checking seams for this work turned up **four splice clicks in the shipped version** that
+every whole-file check had passed: 112×, 112×, 2786× and 4282× the local 19–23 kHz norm,
+against a control maximum of 15×. At 35:59.941 the waveform stepped 20206 counts where the
+original moves 322.
+
+The cause is span spacing. `apply_fill` crossfades 10 ms into the audio either side of a
+span; where the next span begins less than 20 ms after the previous one ends, the second
+repair blends into and overwrites the first one's tail fade, producing a discontinuity
+neither fill contains alone. Eight span pairs were that close — the span list had
+accumulated across several detection passes and was never re-merged, and `detect.py`
+merged at 15 ms, narrower than the crossfade it has to protect.
+
+Those eight are now repaired as single spans (**329 spans → 321**, same 309 dropouts), and
+two tools changed:
+
+- `detect.py` merges at 20 ms, tied to twice `XFADE`.
+- `verify.py` gained a per-seam ceiling. The existing ultrasonic check compares medians —
+  robust, and the right test for a systemic fault — but a median cannot see four outliers
+  among 642 seams. It moved from 1.58 to 1.58 while four audible clicks sat in the file.
+
+### 10.7 A 24 ms A/B misalignment on the review page, fixed
+
+Re-encoding the repaired MP3 exposed a separate problem in the page. It seeks by byte
+offset — frame index × 576 bytes, plus a per-file header offset — because that is the only
+way to decode a 24 s window out of a 93 MB file over HTTP range requests. The original
+capture carries one more leading frame than a fresh encode does, so at the same nominal
+time the two files decoded audio 24 ms apart: the stacked spectrograms did not line up, and
+neither did the audio when switching between versions.
+
+Measured against the lossless masters, the before file was reading 36 ms early and the
+after file 12 ms. Advancing the before file's offset by one frame (44 → 620 bytes) brings
+them into exact agreement and cuts the absolute error to 12 ms. Confirmed in the browser:
+cross-correlating the two decoded envelopes over the same window now returns a lag of 0.
+
+### 10.8 Also checked, and not the cause
+
+**A skip in the timeline.** If the capture had dropped samples rather than muting, the
+music would resume at a different point in the bar and no exemplar could match both sides
+of a gap. Measured across 247 dropouts, the beat-phase step is 51 ms — *smaller* than the
+98 ms measured across 494 clean boundaries. The capture mutes; it does not lose musical
+time, so filling in place is correct.
+
+**Under-covered spans, undetected dropouts, residual tails.** All three were checked
+across the window and came back clean (§10.1).
+
+---
+
+## 11. Caveats
+
+**The matched fills are not what was played.** 305 of 321 repairs contain real audio
+lifted from elsewhere in the set (the other 16 are pitch-synchronous repeats of their own
+neighbours). They are musically plausible, spectrally continuous and now placed on the
+beat, but they are inventions. For a commercial release, spot-check the longest by ear:
+**43:11.730** (343 ms), **40:52.518** (225 ms), **25:45.395** (175 ms), **42:01.180**
+(174 ms). The first two are merged spans — each conceals two dropouts a few milliseconds
+apart, so they are the longest continuous stretches of invented audio in the file.
+
+**One span has no good answer.** 25:45.654, a 26 ms gap, sits 13.5 dB below its
 neighbours because no comparable passage exists nearby; widening the span and re-searching
 did not improve it. It is the only fill more than 10 dB down.
 
@@ -629,12 +778,13 @@ available on request; it was omitted here for size.
 
 ---
 
-## 11. Files
+## 12. Files
 
 | File | Description |
 |---|---|
 | `audio/1784253717886.mp3` | Original capture, unmodified |
 | `audio/1784253717886_repaired.mp3` | Repaired, 192 kbps |
-| `data/repair_manifest.csv` | All 238 repairs: timecode, span, method, lag, match score, spectral score, fill level, crossfade |
-| `data/dropouts_detected.csv` | All 241 detections with per-channel attenuation |
+| `data/repair_manifest.csv` | All 321 repairs: timecode, span, how found, method, lag, match score, fill level, local BPM, distance off the beat, spans merged, whether re-filled |
+| `data/dropouts_detected.csv` | The original 241 detections with per-channel attenuation |
 | `index.html` | Before/after comparison page with A/B audio |
+| `tools/` | Detection, repair and verification code, runnable standalone |

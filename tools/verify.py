@@ -141,12 +141,28 @@ def main():
     print(f"5. seam 19-23 kHz  repaired median {np.median(u):.2f}   "
           f"control median {np.median(uc):.2f}   ratio {ratio:.2f}x   "
           f"(above control p99: {(u > th).sum()}/{len(u)})")
-    # Compare medians, not an exceedance count: with a few hundred control
-    # samples the p99 is the 2nd-highest value and far too noisy to gate on.
-    # Hard splices are not subtle - the failure this guards against measured a
-    # median of 258x - so a 3x median ratio separates them with room to spare.
+    # Two thresholds, because they fail differently.
+    #
+    # The median ratio catches a systemic fault - every seam spliced rather than
+    # crossfaded - and is robust where a p99 estimated from a few hundred
+    # controls is not (there the p99 is the 2nd-highest value, far too noisy to
+    # gate on). The failure it guards against measured 258x, so 3x separates it
+    # with room to spare.
+    #
+    # But a median cannot see a handful of outliers. Four seams in one shipped
+    # version reached 112x, 2786x and 4282x against a control max of 15x - four
+    # audible clicks among 642 seams - and the median moved from 1.58 to 1.58.
+    # Individual seams need their own ceiling.
     if ratio > 3.0:
         fails.append(f"broadband splice bursts at seams ({ratio:.1f}x control median)")
+    ucap = max(20.0, 4.0 * np.percentile(uc, 99))
+    out = np.where(u > ucap)[0]
+    print(f"   individual seams above {ucap:.0f}x    : {len(out)}"
+          + (f"   worst {u.max():.0f}x at {fmt(edges[int(np.argmax(u))]/SR)}"
+             if len(out) else ""))
+    if len(out):
+        fails.append(f"{len(out)} individual seams above {ucap:.0f}x the local "
+                     f"ultrasonic norm (worst {u.max():.0f}x)")
 
     # 6 silence introduced
     za, zb = zero_runs(A), zero_runs(B)

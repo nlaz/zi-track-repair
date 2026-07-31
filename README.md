@@ -32,6 +32,8 @@ dropout's edge.
 | Peak level | −0.32 dBFS | **−0.32 dBFS** |
 | Dropouts found (241 detected + 70 missed) | 311 | — |
 | Repairs visually inspected | — | **238 / 238** |
+| Exemplar lags within 25 ms of the beat | 29% | **55%** |
+| Splice clicks at seams | — | **0** (4 in an earlier version) |
 | Residual damage after repair | — | **0** |
 
 `REPORT.md` is the formal technical report. This file is the working narrative: how the
@@ -47,7 +49,7 @@ verification, runnable standalone.
 - `index.html` — comparison page: full-length A/B playback, live stacked spectrograms
 - `REPORT.md` — technical report (findings, method, verification, caveats)
 - `audio/` — original and repaired MP3, 192 kbps, matching formats
-- `data/repair_manifest.csv` — all 329 repairs: how found, method, lag, match score, fill level
+- `data/repair_manifest.csv` — all 321 repairs: how found, method, lag, match score, fill level, local BPM, distance off the beat
 - `data/dropouts_detected.csv` — the original 241 detections with per-channel attenuation
 - `data/repairs.json`, `data/clips.json` — page data
 - `clips/`, `img/` — A/B excerpts and static spectrograms
@@ -147,8 +149,35 @@ in a quieter section was excluded by construction**. A rescan by floor-relative-
 surroundings found **70 more**, taking the real total from 241 to 311. Detail in
 `REPORT.md` §7.
 
-**Final: 330 repair spans, 17.1 s of fill, 311 dropouts concealed, one deep dip left in
-place because it is music.**
+### 10. Ask where the fill came from, not just what it sounds like
+
+Reported by ear: a run of repairs from 38:19 where "the spectrum looks like it creates
+new patterns that didn't match the pattern". Both halves of that were right.
+
+That stretch holds **17 dropouts in 42 seconds**, five times the track's average density,
+so any weakness in the fills is concentrated there. The spans were fine — each matched the
+measured damage to within a millisecond. The fills were coming from the wrong place.
+
+The passage runs at 145.14 BPM, a 413.4 ms beat, stable to under a millisecond. Measured
+against that grid the exemplar lags sat a median **121 ms off a whole beat** — further off
+than the 103 ms that random lags would give. The borrowed fragments were landing between
+the hits instead of on them.
+
+The ranking function was the cause. It scored candidates by cross-correlating the 240 ms
+either side of the gap, and in dense percussion that measure has many near-ties, so it
+chose on timbre and let the position in the bar fall where it may. Constraining lags to
+whole multiples of the *local* beat — measured per span, since a DJ set has no single
+tempo — moved the median from 154 ms to 11 ms on the spans that were re-filled, and from
+57 ms to 23 ms across the whole track.
+
+Checking seams for that work turned up something unrelated and worse: **four splice clicks
+in the shipped version**, up to 4282× the local ultrasonic norm against a control maximum
+of 15×. Where two spans sit closer than the 20 ms of crossfade, the second repair
+overwrites part of the first one's fade and leaves a discontinuity neither fill contains
+alone. Eight span pairs were that close. They are now repaired as single spans.
+
+**Final: 321 repair spans, 18.8 s of fill, 309 dropouts concealed, one deep dip left in
+place because it is music.** Detail in `REPORT.md` §10.
 
 ---
 
@@ -295,6 +324,56 @@ since a change that is not measurably better should not ship.
 
 **Generalises to:** if the thing you are reconstructing has structure in time, at least one
 term in the objective has to measure *when*, not just *how much*.
+
+### A near-tied objective is decided by whatever it does not measure
+
+Ranking exemplars by waveform cross-correlation sounds like it measures similarity, and it
+does — but in dense percussion almost any 240 ms window correlates respectably with almost
+any other, so the winner is separated from the runners-up by very little. When an objective
+is nearly flat across its candidates, the choice is effectively made by whichever property
+it *doesn't* score. Here that was position in the bar, and the result was fills landing a
+third of a beat off — worse placement than picking lags at random.
+
+**Generalises to:** check the *margin*, not just the winner. A ranking where the top score
+barely beats the tenth is not selecting on the criterion you wrote down.
+
+### A control that does not reproduce the failure proves nothing either way
+
+The obvious way to test a concealment change is to damage known-good audio and compare the
+fill to the truth. Two such tests were built, and both returned "no significant
+difference" — which read as evidence the change was pointless. It was not: in both, the
+old method had *already* chosen near-grid lags on synthetic damage (35 ms and 9 ms off,
+against 58 ms on real dropouts, p = 1.2 × 10⁻⁴). The two methods were making the same
+choice, so the test had nothing to measure.
+
+A null result from a control that never reproduced the condition is uninformative, not
+negative — and the two are easy to confuse, because they look identical in the output.
+
+**Generalises to:** before believing a negative result, verify the control actually
+exhibits the behaviour under test. Instrument the mechanism, not just the outcome.
+
+### A robust statistic is robust against the thing you want to find
+
+An earlier revision replaced a p99-exceedance count with a median ratio for the seam check,
+because a p99 estimated from a few hundred controls is the second-highest value and far too
+noisy to gate on. That was the right call for the fault it was built for — every seam
+spliced instead of crossfaded — and it made the check blind to the opposite shape. Four
+seams at 112×, 112×, 2786× and 4282× the local norm sat in a shipped file while the median
+read 1.58 both with and without them.
+
+Systemic faults move a median; rare ones do not. A check that must catch both needs both a
+central-tendency test and a per-item ceiling.
+
+### Two correct components can be wrong about each other
+
+`detect.py` merged spans closer than 15 ms. `repair.py` crossfaded 10 ms into the audio
+either side of a span. Each is defensible alone; together they guarantee that spans between
+15 and 20 ms apart get repaired into one another, the second fill overwriting the first
+one's fade. The constant in one file had to be expressed in terms of the constant in the
+other, and was not.
+
+**Generalises to:** when two modules share an implicit invariant, derive one bound from the
+other in code. A number that only happens to be large enough is a latent bug.
 
 ### Every "0 remaining" is measured against an inventory
 
