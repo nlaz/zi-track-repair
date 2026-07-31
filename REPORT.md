@@ -1,9 +1,11 @@
 # Track repair — technical report
 
-**Source:** `1784253717886.mp3` — 65:45, 48 kHz stereo, 192 kbps CBR MP3, 94.7 MB
+**Source:** `1784253717886.mp3` — 65:45 as captured, 48 kHz stereo, 192 kbps CBR MP3
+**Delivered:** 64:45 — the first minute is a false start and is trimmed (§9)
 **Reported symptom:** "the track is skipping and has clipping artifacts"
 
-**Outcome:** 311 dropouts concealed across 330 repair spans. The original detector found
+**Outcome:** 309 dropouts concealed across 329 repair spans in the delivered track.
+The code is in [`tools/`](tools/). The original detector found
 241 of them; a later scan found 70 more that it had been built to exclude (§7).
 Zero dropouts remain, fills sit level with the surrounding music, and no sample outside
 a repair span or its 10 ms crossfade was altered.
@@ -547,7 +549,64 @@ different places — which is precisely what a listener notices first in rhythmi
 
 ---
 
-## 9. Caveats
+## 9. The false start, and the one gap that could not be concealed
+
+The capture does not begin with the set. It begins with roughly 49 seconds of music,
+then **10.46 seconds of dead air** (00:49.46 – 00:59.92), and then the set proper starts
+at **01:00.012**. The performer restarted.
+
+### 9.1 What the dead section is
+
+| | |
+|---|---|
+| Duration | **10.46 s** |
+| Level in the core | rms **−75.5 dBFS**, peak −54.1 dBFS |
+| Music either side | rms ≈ −14 dBFS, peak ≈ −1.4 dBFS |
+| Spectrum | flat across 200 Hz – 10 kHz — a bare noise floor, no musical content |
+| Correlation, 4 s before vs 4 s after | **−0.03** (unrelated material) |
+
+It is 61 dB below the surrounding music and constant across all ten seconds, so it is
+neither a fade nor a filtered breakdown. It is a total stream loss.
+
+### 9.2 Why it was missed by every earlier scan
+
+This is the fourth distinct way the detection missed something, and the most instructive:
+
+- The **edge detector** caps a dropout's recovery search and never considered a candidate
+  of this length.
+- The **floor detector** found its edges, but the gate rejected them for having
+  "quiet music before" and "quiet music after" — because the neighbourhood of a point
+  inside a ten-second dropout *is itself the same dropout*. A relative test is blind to a
+  hole larger than the window it compares against.
+- The duration gate (`≤ 260 ms`) excluded it explicitly.
+
+A long enough fault stops looking like a fault and starts looking like context.
+
+### 9.3 Why it is not concealed
+
+10.46 s is roughly four bars. Every concealment method here works by borrowing real audio
+from elsewhere in the set, which is inaudible at 20–100 ms and obvious at four bars — the
+listener simply hears a passage twice. Concealment does not scale to this.
+
+### 9.4 What was done instead
+
+Both files are trimmed at exactly **60.000 s**, so the delivered track begins at the
+restart. The trim point sits on the noise floor 12 ms before the first transient, so the
+attack is intact and there is no click; a 3 ms fade guards the join.
+
+| | as captured | delivered |
+|---|---|---|
+| Duration | 65:45.55 | **64:45.55** |
+| Dropouts concealed | 311 | **309** |
+| Repair spans | 330 | **329** |
+
+The two dropped repairs (00:19.969 and 00:41.305) fell inside the trimmed minute. All
+remaining timecodes in the manifest and on the review page are relative to the delivered
+track, not the original capture.
+
+---
+
+## 10. Caveats
 
 **The matched fills are not what was played.** 230 of 238 repairs contain real audio
 lifted from elsewhere in the set. They are musically plausible and spectrally continuous,
@@ -570,7 +629,7 @@ available on request; it was omitted here for size.
 
 ---
 
-## 10. Files
+## 11. Files
 
 | File | Description |
 |---|---|

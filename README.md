@@ -6,7 +6,11 @@ Dropout analysis and repair of a 66-minute set captured from an RTMP stream.
 either version with live stacked spectrograms, past and future either side of the
 playhead.
 
-The capture lost **8.52 seconds of audio across 311 dropouts**. None of it was
+The capture opens with a false start: ~49 s of music, then 10.46 s of dead air, then the
+set proper from 01:00. **Both files are trimmed to begin at the restart** — delivered
+length 64:45.
+
+Within the delivered track it lost **8.4 seconds of audio across 309 dropouts**. None of it was
 recoverable — no redundancy, no surviving channel. All 311 are now concealed and verified
 inaudible.
 
@@ -19,7 +23,7 @@ dropout's edge.
 
 | | Before | After |
 |---|---|---|
-| Dropouts | 311 | **0** |
+| Dropouts | 309 | **0** |
 | Audio lost | 8.52 s | **0.00 s** |
 | Fill level vs surrounding music | −5.7 dB | **±0.0 dB** |
 | Fills >6 dB below surroundings | — | **2** |
@@ -35,15 +39,19 @@ job actually went, including what went wrong.
 
 ---
 
+The code that produced all of this is in [`tools/`](tools/) — detection, repair and
+verification, runnable standalone.
+
 ## Contents
 
 - `index.html` — comparison page: full-length A/B playback, live stacked spectrograms
 - `REPORT.md` — technical report (findings, method, verification, caveats)
 - `audio/` — original and repaired MP3, 192 kbps, matching formats
-- `data/repair_manifest.csv` — all 330 repairs: how found, method, lag, match score, fill level
+- `data/repair_manifest.csv` — all 329 repairs: how found, method, lag, match score, fill level
 - `data/dropouts_detected.csv` — the original 241 detections with per-channel attenuation
 - `data/repairs.json`, `data/clips.json` — page data
 - `clips/`, `img/` — A/B excerpts and static spectrograms
+- `tools/` — the detection, repair and verification code
 
 ---
 
@@ -252,6 +260,23 @@ The deficit was an artefact: a 20–100 ms window landing between hi-hat transie
 naturally measures low against its own neighbourhood. Nothing was wrong. Without the
 control, that would have been a day spent optimising against noise — the same trap as the
 two misleading metrics above, caught earlier only because the habit was already in place.
+
+### A fault larger than your window looks like context
+
+A 10.46 s total dropout at 00:49 was missed by every scan. The floor detector found its
+edges and the gate threw them out for having "quiet music either side" — because the
+neighbourhood of a point inside a ten-second hole *is the same hole*. The duration gate
+excluded it outright as well.
+
+Relative tests are the right tool for short faults and blind to long ones, because they
+compare against a window the fault has already swallowed. Anything that scans for
+anomalies needs at least one absolute check, or one at a much longer timescale, or it will
+confidently pass over the largest problem in the data.
+
+It also could not be concealed once found: 10.46 s is about four bars, and every
+concealment method here borrows real audio from elsewhere — inaudible at 100 ms, obviously
+a repeat at four bars. It turned out to be a false start, so the fix was to trim rather
+than to fill.
 
 ### An average cannot see arrangement
 
