@@ -83,6 +83,18 @@ canvas{display:block; width:100%; height:auto;}
   padding:.5rem .6rem; cursor:pointer; min-width:3rem;}
 .skips button:hover{color:var(--ink); border-color:var(--ink-faint);}
 button:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
+a:focus-visible{outline:2px solid var(--inferred); outline-offset:2px;}
+.grab{display:flex; align-items:center; gap:.3rem;}
+.grab .lbl{font-family:var(--mono); font-size:.68rem; color:var(--ink-faint);}
+.grab a{font-family:var(--mono); font-size:.72rem; color:var(--ink-soft);
+  background:var(--panel-2); border:1px solid var(--rule); border-radius:1px;
+  padding:.5rem .6rem; text-decoration:none; display:inline-flex; gap:.35rem;
+  align-items:center;}
+.grab a:hover{color:var(--ink); border-color:var(--ink-faint);}
+.grab a::before{content:"\2193"; color:var(--ink-faint);}
+.grab a:hover::before{color:var(--ink);}
+.grab a[data-v=before]{border-left:2px solid var(--missing);}
+.grab a[data-v=after]{border-left:2px solid var(--measured);}
 .legend{font-family:var(--mono); font-size:.68rem; line-height:1.6; color:var(--ink-faint);
   padding:.6rem 1.1rem; border-top:1px solid var(--rule-soft); background:var(--panel-2);}
 .legend b{color:var(--ink-soft); font-weight:500;}
@@ -212,6 +224,15 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
           <button type="button" id="bk" title="Back 10 seconds">&minus;10s</button>
           <button type="button" id="fw" title="Forward 10 seconds">+10s</button>
         </div>
+        <div class="grab">
+          <span class="lbl">save</span>
+          <a data-v="before" href="audio/1784253717886.mp3"
+             download="1784253717886_original.mp3"
+             title="Original capture, unmodified — MP3 192 kbps, 93.3 MB">before</a>
+          <a data-v="after" href="audio/1784253717886_repaired.mp3"
+             download="1784253717886_repaired.mp3"
+             title="Repaired track — MP3 192 kbps, 93.3 MB">after</a>
+        </div>
         <span class="hint" id="hint">hearing the repaired track</span>
         <span class="hint" id="next"></span><span class="hint" id="specnote"></span>
         <span class="tcode" id="tcode">0:00 / 64:45</span>
@@ -259,6 +280,13 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
         <div class="toggle" role="group" aria-label="Which version you hear">
           <button type="button" id="exb" data-v="before">Before</button>
           <button type="button" id="exa" data-v="after">After</button>
+        </div>
+        <div class="grab">
+          <span class="lbl">save excerpt</span>
+          <a data-v="before" id="exdlb" href="" download
+             title="This excerpt before repair — MP3 128 kbps">before</a>
+          <a data-v="after" id="exdla" href="" download
+             title="This excerpt after repair — MP3 128 kbps">after</a>
         </div>
         <span class="hint" id="exhint">hearing the repaired excerpt</span>
         <span class="tcode" id="extcode">0.0 / 8.0 s</span>
@@ -322,12 +350,12 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
 <section>
   <div class="sechead"><h2>Files</h2></div>
   <div class="dl">
-    <a href="audio/1784253717886_repaired.mp3" download>
-      <span class="t">Repaired track</span>
-      <span class="s">MP3 192 kbps &middot; 93.3 MB &middot; 64:45</span></a>
-    <a href="audio/1784253717886.mp3" download>
-      <span class="t">Original (unmodified)</span>
-      <span class="s">MP3 192 kbps &middot; 93.3 MB &middot; 64:45</span></a>
+    <a href="audio/1784253717886_repaired.mp3" download="1784253717886_repaired.mp3">
+      <span class="t">Repaired track &mdash; after</span>
+      <span class="s">MP3 192 kbps &middot; 93.3 MB &middot; 64:45 &middot; 321 spans filled</span></a>
+    <a href="audio/1784253717886.mp3" download="1784253717886_original.mp3">
+      <span class="t">Original capture &mdash; before</span>
+      <span class="s">MP3 192 kbps &middot; 93.3 MB &middot; 64:45 &middot; unmodified</span></a>
     <a href="data/repair_manifest.csv" download>
       <span class="t">Repair manifest</span>
       <span class="s">CSV &middot; all 321 spans</span></a>
@@ -340,7 +368,7 @@ footer{margin-top:2.6rem; padding-top:1rem; border-top:1px solid var(--rule);
 <footer>
   The repaired master was produced losslessly; this MP3 is a 192&nbsp;kbps encode of it,
   matching the original's format so the two are directly comparable. Ask if you need the
-  lossless file. The 312 matched fills are real audio from elsewhere in the set &mdash;
+  lossless file. The 305 matched fills are real audio from elsewhere in the set &mdash;
   musically plausible and spectrally continuous, but not what was played in those moments.
 </footer>
 
@@ -740,6 +768,14 @@ function showClip(i){
   for(const k of ['before','after']){
     EX[k].el.src='clips/'+c.key+'_'+k+'.mp3';
     EX[k].el.load(); EX[k].el.currentTime=0;
+  }
+  // downloads follow whichever repair is on screen
+  for(const [id,k] of [['exdlb','before'],['exdla','after']]){
+    const a=el(id);
+    a.href='clips/'+c.key+'_'+k+'.mp3';
+    a.setAttribute('download',c.key+'_'+k+'.mp3');
+    a.title=`${c.label}, ${c.pre}s before to ${c.post}s after the dropout — `+
+            `${k==='before'?'as captured':'repaired'}, MP3 128 kbps`;
   }
   el('env').setAttribute('aria-valuemax',(c.pre+c.post).toFixed(1));
   el('excap').innerHTML=`<b>${c.label}</b> &mdash; ${c.ms} ms, filled by `+
